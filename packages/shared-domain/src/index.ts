@@ -11,12 +11,18 @@ export * from './entities/Exercise.js'
 export * from './entities/Session.js'
 export * from './entities/Answer.js'
 export * from './entities/Hint.js'
+export * from './entities/Tema.js'
 
 export * from './repositories/UserRepository.js'
 export * from './repositories/SessionRepository.js'
 export * from './repositories/AnswerRepository.js'
 export * from './repositories/HintRepository.js'
 export * from './repositories/ExerciseRepository.js'
+export * from './repositories/TemaRepository.js'
+
+export * from './ports/IdGenerator.js'
+export * from './ports/Clock.js'
+export * from './ports/HintUsageTracker.js'
 
 export * from './services/AdaptiveDifficultyEngine.js'
 

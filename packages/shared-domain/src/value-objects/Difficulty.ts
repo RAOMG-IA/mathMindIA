@@ -3,3 +3,7 @@
 export interface Difficulty {
   readonly value: number
 }
+
+// Rating de partida para un usuario sin Difficulty registrada todavia en un AcademicLevel.
+// Mismo valor usado como ejemplo en AdaptiveDifficultyEngine.test.ts.
+export const INITIAL_RATING: Difficulty = { value: 1200 }

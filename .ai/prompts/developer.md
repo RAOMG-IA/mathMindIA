@@ -14,3 +14,63 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 **Problema real encontrado y corregido de paso**: al ejecutar `turbo run test` por primera vez en todo el monorepo (no solo el paquete tocado), los paquetes sin tests todavía fallaban con `No test files found, exiting with code 1` — habría roto el pipeline de test para cualquiera que lo ejecutara en la raíz. Corregido añadiendo `--passWithNoTests` (flag real de vitest, verificado con `--help`) a los 8 `package.json` con script `test`.
 
 **Output generado**: `packages/shared-domain/src/services/AdaptiveDifficultyEngine.ts` (implementación completa). Verificado: `vitest run` → **8/8 tests en verde** (primer intento, sin necesitar ajustes — los cálculos a mano de la fase Red coincidieron). `npx turbo run typecheck lint test`: todo en verde en los 12-22 paquetes según la tarea.
+
+---
+
+## 2026-08-06 — Implementación de UpdateDifficultyUseCase y ValidateAnswerUseCase (TDD Green)
+
+**Input**: Confirmación del usuario ("si") para implementar tras el Red de 8/8 tests fallidos (Test Agent, fase previa). Primer Caso de Uso de Application completo del proyecto.
+
+**Contexto utilizado**: `UpdateDifficultyUseCase.test.ts` y `ValidateAnswerUseCase.test.ts` (especificación real a satisfacer), `computeNextDifficulty` (ya implementado, no se repite la fórmula), contratos de `packages/shared-domain/src/repositories` y `src/ports`.
+
+**Decisión tomada**: `UpdateDifficultyUseCase` depende solo de `ExerciseRepository` (recibe `userRating` como parámetro en vez de recargar el `User`, evitando doble fetch/escritura con `ValidateAnswerUseCase`) — persiste el lado `Exercise` y devuelve `nextUserRating` a quien la invoque. `ValidateAnswerUseCase` orquesta `Session`→`Exercise`→`User`, deriva el timeout (flujo 1a) de `responseTimeMs >= exercise.timer.limitMs` sin campo de input nuevo, y hace una única escritura de `User` (streak + rating) tras recibir `nextUserRating` de `UpdateDifficultyUseCase`.
+
+**Output generado**: `apps/backend-api/src/application/use-cases/{UpdateDifficultyUseCase,ValidateAnswerUseCase}.ts` (implementación completa, reemplaza el `declare class` de la fase Red). Verificado: `vitest run` → **8/8 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 30/30 tareas en verde en todo el monorepo.
+
+---
+
+## 2026-08-06 — Implementación de GetUserStatisticsUseCase (TDD Green)
+
+**Input**: Continuación sin pausa tras el Red de 3/3 tests fallidos (Test Agent, fase previa) — el usuario ya había delegado el ciclo completo ("vamos con lo que indicas").
+
+**Contexto utilizado**: `GetUserStatisticsUseCase.test.ts` (especificación real a satisfacer, incluye el caso límite del umbral `MIN_ATTEMPTS_PER_TOPIC`), contratos `UserRepository`/`AnswerRepository`/`ExerciseRepository` ya existentes.
+
+**Decisión tomada**: agregación en un `Map<TemaCode, TopicAccumulator>` en una sola pasada sobre las `Answer` del usuario (con cache de `Exercise` por id para no repetir `findById`), fortalezas/debilidades como los `topics` que superan `MIN_ATTEMPTS_PER_TOPIC` ordenados por `accuracy` (desc/asc) y recortados a `TOP_N`. Usuario inexistente lanza error (mismo criterio que `ValidateAnswerUseCase`).
+
+**Output generado**: `apps/backend-api/src/application/use-cases/GetUserStatisticsUseCase.ts` (implementación completa). Verificado: `vitest run` → **3/3 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 30/30 tareas en verde en todo el monorepo.
+
+---
+
+## 2026-08-06 — Implementación de EndSessionUseCase y GenerateHintUseCase (TDD Green)
+
+**Input**: Continuación sin pausa tras el Red de 10/10 tests fallidos (Test Agent, fase previa) — mismo patrón de delegación que las iteraciones anteriores.
+
+**Contexto utilizado**: `EndSessionUseCase.test.ts` y `GenerateHintUseCase.test.ts` (especificación real a satisfacer), puertos `Clock`/`HintUsageTracker`/`IdGenerator` y `Session.ratingAtStart` ya materializados.
+
+**Decisión tomada**: `EndSessionUseCase` calcula el resumen directamente sobre las `Answer` de la sesión (sin más dependencias que `AnswerRepository`), compara el rating actual del usuario contra `session.ratingAtStart` para la variación, y hace un único `save` de la `Session` con `endedAt`. `GenerateHintUseCase` valida sesión activa → ejercicio existente → `type === 'Resolution'` → tiempo expirado, en ese orden; usa `HintUsageTracker.incrementAndGet` para obtener `order` antes de decidir si reutiliza (`HintRepository.findByExerciseIdAndOrder`) o genera (`HintGenerator.generate` + `save`).
+
+**Output generado**: `apps/backend-api/src/application/use-cases/{EndSessionUseCase,GenerateHintUseCase}.ts` (implementación completa). Verificado: `vitest run` → **10/10 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 30/30 tareas en verde en todo el monorepo, 21/21 tests en `backend-api` (5 Casos de Uso ya implementados).
+
+---
+
+## 2026-08-06 — Implementación de SelectNextExerciseUseCase y StartSessionUseCase (TDD Green)
+
+**Input**: Continuación sin pausa tras el Red de 11/11 tests fallidos (Test Agent, fase previa). Completa el set de 6 Casos de Uso listados en `application/use-cases/README.md`.
+
+**Contexto utilizado**: `SelectNextExerciseUseCase.test.ts` y `StartSessionUseCase.test.ts` (especificación real a satisfacer), `TemaRepository`/`Tema` ya materializados, `ExerciseRepository.findByDifficultyBand` (contrato ya existente, sin cambios).
+
+**Decisión tomada**: `SelectNextExerciseUseCase` consulta banda estrecha (±150) y solo si viene vacía consulta banda ampliada (±300) — evita una consulta redundante cuando la banda estrecha ya tiene resultados; selecciona con `reduce` el candidato de `difficulty` más próximo al `userRating`. `StartSessionUseCase` valida Tema→AcademicLevel antes de tocar cualquier repositorio de escritura (falla rápido), y compone `SelectNextExerciseUseCase` real para el paso 3 en vez de duplicar su lógica.
+
+**Output generado**: `apps/backend-api/src/application/use-cases/{SelectNextExerciseUseCase,StartSessionUseCase}.ts` (implementación completa). Verificado: `vitest run` → **11/11 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 30/30 tareas en verde en todo el monorepo, **32/32 tests en `backend-api`** — los 6 Casos de Uso de `application/use-cases/README.md` quedan completos.
+
+---
+
+## 2026-08-06 — Implementación de QwenClient, LangChainQwenModel y QwenHintGenerator (TDD Green)
+
+**Input**: Continuación sin pausa tras el Red de 7/7 tests fallidos (Test Agent, fase previa). Primera pieza de Infrastructure con implementación real (no `declare class`) del proyecto.
+
+**Contexto utilizado**: `QwenClient.test.ts`/`QwenHintGenerator.test.ts` (especificación real a satisfacer), `buildGenerateExercisePrompt`/`buildGenerateHintPrompt` + schemas Zod ya creados, `@langchain/openai` instalado (resuelto `1.5.6`, forzó `@langchain/core` de `1.2.4` a `1.2.5` para satisfacer su peer — sin conflicto ERESOLVE).
+
+**Decisión tomada**: `QwenClient.generateExercise`/`generateHint` arman el prompt, invocan `ChatModel.invoke`, y parsean+validan con `schema.parse(JSON.parse(raw))` — cualquier fallo (JSON invalido o forma incorrecta) se propaga como excepción sin capturarla (control de seguridad ante output de IA, ADR-012). `LangChainQwenModel` implementa `ChatModel` envolviendo `ChatOpenAI` de LangChain contra el endpoint OpenAI-compatible de Qwen — **sin tests automáticos**, gap aceptado explícitamente (depende de red real). `QwenHintGenerator` mapea `{exercise, order, previousHints}` a `GenerateHintInput` y delega en `QwenClient.generateHint`, tipado contra `Pick<QwenClient, 'generateHint'>` para permitir fakes estructurales en tests. `apps/ai-engine/src/index.ts` deja de ser un placeholder — exporta `ChatModel`/`QwenClient`/`LangChainQwenModel` para que `backend-api` los consuma como paquete de workspace (`main`/`types` añadidos al `package.json`, antes ausentes).
+
+**Output generado**: `apps/ai-engine/src/llm/{QwenClient,LangChainQwenModel}.ts`, `apps/ai-engine/src/index.ts`, `apps/backend-api/src/infrastructure/ai/QwenHintGenerator.ts` (implementación completa). Verificado: `vitest run` → **7/7 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 31/31 tareas en verde en todo el monorepo, 5/5 tests en `ai-engine`, 35/35 tests en `backend-api`.

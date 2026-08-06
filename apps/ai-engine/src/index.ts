@@ -1,1 +1,5 @@
-console.log('ai-engine placeholder — batch generation not implemented yet (see docs/use-cases/UC-001-generate-exercise-batch.md)')
+export * from './llm/ChatModel.js'
+export * from './llm/QwenClient.js'
+export * from './llm/LangChainQwenModel.js'
+export * from './prompts/GenerateExercise.js'
+export * from './prompts/GenerateHint.js'

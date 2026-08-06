@@ -2,6 +2,7 @@ import type { AcademicLevel } from '../value-objects/AcademicLevel.js'
 import type { Difficulty } from '../value-objects/Difficulty.js'
 import type { ExerciseType } from '../value-objects/ExerciseType.js'
 import type { TemaCode } from '../value-objects/TemaCode.js'
+import type { Timer } from '../value-objects/Timer.js'
 import type { ExerciseId } from './ids.js'
 
 // Ver docs/ADR/ADR-004_domain.md.
@@ -17,6 +18,7 @@ export interface Exercise {
   readonly options?: readonly [string, string, string]
   readonly correctAnswer: string
   readonly difficulty: Difficulty
+  readonly timer: Timer
   readonly explanation: string
   readonly generatedBy: 'ai-batch' | 'manual'
 }

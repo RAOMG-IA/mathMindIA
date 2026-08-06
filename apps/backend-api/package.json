@@ -20,7 +20,8 @@
     "@mathmind/shared-domain": "*",
     "@mathmind/shared-types": "*",
     "@mathmind/shared-config": "*",
-    "@mathmind/shared-constants": "*"
+    "@mathmind/shared-constants": "*",
+    "@mathmind/ai-engine": "*"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

@@ -32,6 +32,7 @@ El stack tecnológico de MathMind AI solo estaba documentado como una lista info
 - LangChain
 - TypeScript
 - Modelo Qwen
+- Zod (validación en tiempo de ejecución de los contratos de entrada/salida de Qwen — ver "Adenda" más abajo)
 
 #### Persistencia
 
@@ -80,6 +81,10 @@ Implementación
 ```
 
 Las decisiones arquitectónicas preceden a la implementación: ADRs, diagramas, casos de uso y contratos se cierran antes de escribir código productivo.
+
+### Adenda (2026-08-06): Zod para validación de contratos IA
+
+Al implementar `QwenClient` (`apps/ai-engine/src/llm`) se decide **Zod** como librería de validación en tiempo de ejecución de `GenerateExerciseOutput`/`GenerateHintOutput` — nombrada como candidato en 4 sitios del código (`QwenClient.ts`, `prompts/GenerateExercise.ts`, `prompts/GenerateHint.ts`, `prompts/README.md`) desde que se definieron esos contratos, pero nunca ratificada, mismo criterio ya aplicado a la decisión de Expo Router (stack elegido en el momento de implementar, no de antemano). Necesaria porque un `interface` de TypeScript se borra en compilación y no sirve para validar la respuesta real de Qwen antes de usarla con `.withStructuredOutput()` de LangChain. Validación de **forma** únicamente (no de invariantes de dominio, que siguen siendo responsabilidad del Caso de Uso que consuma el resultado).
 
 ## Consecuencias
 

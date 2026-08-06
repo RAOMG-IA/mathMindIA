@@ -12,3 +12,63 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 **Decisión tomada**: 8 casos de test en `packages/shared-domain/src/services/AdaptiveDifficultyEngine.test.ts`, valores calculados a mano contra las fórmulas de ADR-005 (no aproximados): ratings iguales con acierto/fallo/límite de tiempo, modulación y tope de racha, ratings desiguales en ambas direcciones, y el caso `responseTimeMs > timeLimitMs`. Se materializó la interfaz de ADR-005 como `declare function` (firma real, sin cuerpo) para poder importarla sin escribir lógica productiva (restricción explícita de esta skill). **Hueco de diseño real detectado**: el K provisional (cold start) de ADR-005 necesita un contador de intentos por nivel que no existe en `User` — diferido explícitamente, documentado en ADR-005, los tests cubren `K_base=32` fijo.
 
 **Output generado**: `packages/shared-domain/src/services/AdaptiveDifficultyEngine.ts` (interfaz + constantes + firma sin implementar) y `AdaptiveDifficultyEngine.test.ts` (8 tests). Verificado: `turbo typecheck` 13/13 en verde; `vitest run` → **8/8 tests fallan con `TypeError: computeNextDifficulty is not a function`** — Red confirmado por la razón correcta (falta implementación), no por error de configuración. Implementación (Developer Agent, fase Green) no ejecutada — pendiente de confirmación aparte del usuario.
+
+---
+
+## 2026-08-06 — Tests de UpdateDifficultyUseCase y ValidateAnswerUseCase (TDD Red)
+
+**Input**: Primer Caso de Uso de Application del proyecto. El usuario eligió UC-002 `ValidateAnswerUseCase` (invoca UC-004 `UpdateDifficultyUseCase`) sobre UC-005/UC-008 vía AskUserQuestion, por ser UC-004 un wrapper fino sobre `computeNextDifficulty` ya implementado y testeado.
+
+**Contexto utilizado**: `docs/use-cases/UC-002-validate-answer.md` y `UC-004-update-difficulty.md` (flujo principal/alternativo/postcondiciones), `docs/ADR/ADR-004_domain.md` (forma de `Session`/`Answer`/`User`), `docs/ADR/ADR-005-adaptive-difficulty-engine.md` (mismo caso base ya validado a mano en `AdaptiveDifficultyEngine.test.ts`: rating 1200 vs 1200, streak 0, acierto instantáneo → 1216/1196), huecos de dominio resueltos en la entrada anterior de `architecture.md` (`Exercise.timer`, `INITIAL_RATING`, puertos `IdGenerator`/`Clock`).
+
+**Decisión tomada**: 2 tests para `UpdateDifficultyUseCase` (caso feliz reutilizando el caso ya validado de ADR-005 + guarda de ejercicio inexistente) y 6 para `ValidateAnswerUseCase` (correcta, incorrecta con reset de racha, timeout como incorrecto automático sin campo de input nuevo, sesión inexistente, sesión ya finalizada, ejercicio inexistente). Ambas clases materializadas como `declare class` sin cuerpo (mismo patrón que `computeNextDifficulty` en su fase Red). Dobles de test nuevos en `packages/shared-testing/src/mocks` (`InMemory{Session,Exercise,Answer,User}Repository`, `FixedClock`, `SequentialIdGenerator`) en vez de builders/fixtures (fuera de alcance, mismo patrón de helpers locales que `AdaptiveDifficultyEngine.test.ts`).
+
+**Output generado**: `apps/backend-api/src/application/use-cases/{UpdateDifficultyUseCase,ValidateAnswerUseCase}.ts` (declare class) + `.test.ts` (8 tests), `packages/shared-testing/src/mocks/*.ts` + `src/index.ts` (barrel, antes vacío). Verificado: `turbo typecheck` en verde; `vitest run` → **8/8 tests fallan con `TypeError: ... is not a constructor`** — Red confirmado por la razón correcta. Confirmación del usuario ("si") obtenida antes de pasar a Green.
+
+---
+
+## 2026-08-06 — Tests de GetUserStatisticsUseCase (TDD Red)
+
+**Input**: Continuación directa tras cerrar UC-002/UC-004 ("vamos con lo que indicas" — el usuario delega la elección del siguiente Caso de Uso). Se descartó UC-003 (bloqueado por el hueco ya documentado de `hintsUsed`/contador efímero antes de que exista `Answer`) y UC-006 (necesitaría decidir cómo trackear la "variación de userRating desde el inicio de sesión", hueco de diseño no resuelto) en favor de UC-007, de solo lectura y sin huecos de dominio nuevos.
+
+**Contexto utilizado**: `docs/use-cases/UC-007-get-user-statistics.md` (flujo, incluye explícitamente "Fuera de alcance: umbral exacto de mínimo de intentos por tema — se define al implementar"), `docs/ADR/ADR-006_math_topics.md` (agregación por Tema ya prevista), contrato `AnswerRepository.findByUserId` (ya resuelve el join Answer→Session como responsabilidad de infraestructura, evita que este UC dependa de `SessionRepository`).
+
+**Decisión tomada**: `MIN_ATTEMPTS_PER_TOPIC = 3` y `TOP_N = 3` fijados como constantes locales documentadas — umbrales que el propio UC delega explícitamente al momento de implementar. 3 tests: agregación por tema con precisión/tiempo medio y filtrado de fortalezas/debilidades por umbral (un tema con 1 solo intento se excluye aunque tenga accuracy perfecta), usuario sin historial (flujo 2a, resumen vacío sin error), usuario inexistente (guarda).
+
+**Output generado**: `apps/backend-api/src/application/use-cases/GetUserStatisticsUseCase.ts` (declare class) + `.test.ts` (3 tests). Verificado: `turbo typecheck` en verde; `vitest run` → **3/3 tests fallan con `TypeError: GetUserStatisticsUseCase is not a constructor`** — Red confirmado por la razón correcta.
+
+---
+
+## 2026-08-06 — Tests de EndSessionUseCase y GenerateHintUseCase (TDD Red)
+
+**Input**: "avanza con UC3 y UC6" — el usuario pide desbloquear explícitamente los dos Casos de Uso descartados en la iteración anterior por huecos de diseño, en vez de seguir difiriéndolos.
+
+**Contexto utilizado**: `docs/use-cases/UC-006-end-session.md` y `UC-003-generate-hint.md` (flujo principal/alternativo), huecos de dominio resueltos en la entrada anterior de `architecture.md` (`Session.ratingAtStart`, puerto `HintUsageTracker`, puerto local `HintGenerator`), `packages/shared-types/src/dtos/Hint.ts` (nombres `hintsUsedSoFar`/`order` ya fijados por el contrato DTO existente, reutilizados en el Output del Caso de Uso).
+
+**Decisión tomada**: `EndSessionUseCase` — 4 tests: resumen con intentos (aciertos/intentos/tiempo medio/variación de rating, `endedAt` fijado vía `Clock`), sesión sin respuestas (flujo alternativo, resumen en cero sin error), sesión inexistente, sesión ya finalizada. `GenerateHintUseCase` — 6 tests: genera y persiste pista nueva, reutiliza pista existente sin invocar `HintGenerator` (fake local en el test, no en `shared-testing` — es un puerto de Application, no de dominio/infra reutilizado), `order` se incrementa en pistas sucesivas, rechaza modo Test (flujo 1a), rechaza si el tiempo no ha expirado, sesión inexistente/finalizada. Nuevos dobles en `shared-testing/src/mocks`: `InMemoryHintRepository`, `InMemoryHintUsageTracker`.
+
+**Output generado**: `apps/backend-api/src/application/use-cases/{EndSessionUseCase,GenerateHintUseCase}.ts` (declare class) + `.test.ts` (10 tests). Verificado: `turbo typecheck` en verde; `vitest run` → **10/10 tests fallan con `TypeError: ... is not a constructor`** — Red confirmado por la razón correcta.
+
+---
+
+## 2026-08-06 — Tests de SelectNextExerciseUseCase y StartSessionUseCase (TDD Red)
+
+**Input**: "ok genera uc5 y 8" — último par de Casos de Uso del set original, bloqueados por la ausencia del catálogo de Temas (resuelta en la entrada anterior de `architecture.md`).
+
+**Contexto utilizado**: `docs/use-cases/UC-008-select-next-exercise.md` (banda ±150/±300 ya fijada por ADR-005, no es un judgment call — el algoritmo de selección dentro del resultado filtrado sí lo es, "no fija un algoritmo"), `docs/use-cases/UC-005-start-session.md` (flujo principal/alternativo 1a), `InMemoryTemaRepository` y entidad `Tema` recién creadas.
+
+**Decisión tomada**: `SelectNextExerciseUseCase` — "el más cercano al userRating" como criterio de selección dentro del resultado filtrado (judgment call documentado, igual que `MIN_ATTEMPTS_PER_TOPIC`/`TOP_N` en UC-007). 6 tests: selección dentro de banda estrecha, ampliación de banda (flujo 2a), sin resultados ni en banda ampliada (flujo 2b), rating por defecto (`INITIAL_RATING`) si el usuario no tiene rating para ese nivel, usuario inexistente, forma de salida sin `correctAnswer`/`difficulty`/`explanation`. `StartSessionUseCase` — compone la implementación real de `SelectNextExerciseUseCase` (no un fake, mismo criterio que `ValidateAnswerUseCase`+`UpdateDifficultyUseCase`). 5 tests: creación de `Session` con `ratingAtStart` y primer ejercicio devuelto, Tema inexistente (flujo 1a), Tema que no aplica al `AcademicLevel` elegido (flujo 1a), usuario inexistente, propagación del error de UC-008 cuando no hay ejercicios disponibles.
+
+**Output generado**: `apps/backend-api/src/application/use-cases/{SelectNextExerciseUseCase,StartSessionUseCase}.ts` (declare class) + `.test.ts` (11 tests). Verificado: `turbo typecheck` en verde; `vitest run` → **11/11 tests fallan con `TypeError: ... is not a constructor`** — Red confirmado por la razón correcta.
+
+---
+
+## 2026-08-06 — Tests de QwenClient y QwenHintGenerator (TDD Red)
+
+**Input**: Primera implementación real de Infrastructure (no esqueleto) del proyecto. Decisiones ya confirmadas (ver `architecture.md`): import in-process, Zod, alcance QwenClient+adaptador.
+
+**Contexto utilizado**: `apps/ai-engine/src/prompts/{GenerateExercise,GenerateHint}.ts` (contratos ya existentes + schemas Zod añadidos en esta iteración), puerto nuevo `ChatModel` (permite fake sin red real).
+
+**Decisión tomada**: `QwenClient.test.ts` — 5 tests con `FakeChatModel` (devuelve strings canned): `generateHint`/`generateExercise` con salida válida (parseo correcto), salida con forma inválida (Zod lanza), salida no-JSON (`JSON.parse` lanza). Al escribir el adaptador se detectó un hueco real: el puerto `HintGenerator` (`GenerateHintUseCase.ts`) no llevaba `previousHints` pese a que UC-003 documenta pistas progresivas — se corrigió el puerto y `GenerateHintUseCase` (recopila pistas previas vía `HintRepository`), con 1 test nuevo (`GenerateHintUseCase.test.ts` pasa de 6 a 7 tests) y el `FakeHintGenerator` local actualizado. `QwenHintGenerator.test.ts` — 2 tests con un fake estructural de `QwenClient` (`Pick<QwenClient, 'generateHint'>`, sin LangChain real): mapeo correcto de `{exercise, order, previousHints}` a `GenerateHintInput`, propagación de errores.
+
+**Output generado**: `apps/ai-engine/src/llm/{ChatModel,QwenClient}.ts` (declare class QwenClient) + `QwenClient.test.ts` (5 tests); `apps/backend-api/src/infrastructure/ai/QwenHintGenerator.ts` (declare class) + `.test.ts` (2 tests); `GenerateHintUseCase.ts`/`.test.ts` actualizados. Verificado: `turbo typecheck` en verde; `vitest run` → **7/7 tests fallan por la razón correcta** (`QwenClient`/`QwenHintGenerator is not a constructor`) — Red confirmado.

@@ -1,6 +1,12 @@
-export {}
+export * from './mocks/InMemorySessionRepository.js'
+export * from './mocks/InMemoryExerciseRepository.js'
+export * from './mocks/InMemoryAnswerRepository.js'
+export * from './mocks/InMemoryUserRepository.js'
+export * from './mocks/InMemoryHintRepository.js'
+export * from './mocks/InMemoryTemaRepository.js'
+export * from './mocks/FixedClock.js'
+export * from './mocks/SequentialIdGenerator.js'
+export * from './mocks/InMemoryHintUsageTracker.js'
 
-// Barrel export pendiente. Depende de @mathmind/shared-domain y @mathmind/shared-types
-// para construir builders/fixtures tipados (p. ej. aUser(), anExercise()).
-// IMPORTANTE: shared-domain y shared-types NO deben depender de este paquete (evita ciclo
-// en el grafo de workspaces/Turborepo) -- ver nota en README.md de este paquete.
+// builders/factories/fixtures: pendientes -- ningun Caso de Uso implementado los necesita
+// todavia (ver README.md de este paquete).

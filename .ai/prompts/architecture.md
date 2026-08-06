@@ -158,4 +158,64 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 
 **Output generado**: `.ai/skills/knowledge-manager.md`.
 
+---
+
+## 2026-08-06 — Esqueletos de Infrastructure: Database, API, LLM
+
+**Input**: El usuario pidió generar las clases de Database, API y LLM de infraestructura. Se identificó un impedimento real: la TDD Enforcement Rule (ADR-003) y la ausencia total de Casos de Uso implementados (`apps/backend-api/src/application/use-cases` sigue siendo solo un README) bloquean implementar lógica real ahí. Confirmado por AskUserQuestion: solo firmas de clase (`declare class`, sin cuerpo), mismo patrón que `computeNextDifficulty` en su fase Red y que los contratos de repositorio de `packages/shared-domain`.
+
+**Contexto utilizado**: contratos de `packages/shared-domain/src/repositories/*.ts` (fase 1 de contratos), DTOs de `packages/shared-types/src/dtos/*.ts` y contrato Qwen de `apps/ai-engine/src/prompts/*.ts` (fase 2), ADR-013 (modelo de datos físico que las implementaciones Prisma consumirán), ADR-003 (TDD Enforcement Rule).
+
+**Decisión tomada**: 11 archivos `declare class` sin cuerpo — 5 `Prisma*Repository` (Database, implementan los contratos de `shared-domain`), 5 `*Controller` (API, tipados contra los DTOs, sin conocer Express directamente — el mapeo Request/Response queda para más adelante), y `QwenClient` (LLM, consume los contratos `GenerateExercise*`/`GenerateHint*` ya existentes). Ninguno tiene lógica ni contradice ADR-003.
+
+**Output generado**: `apps/backend-api/src/infrastructure/repositories/Prisma{User,Session,Answer,Hint,Exercise}Repository.ts`, `apps/backend-api/src/presentation/http/{Auth,Session,Answer,Hint,Statistics}Controller.ts`, `apps/ai-engine/src/llm/QwenClient.ts` (+ README). READMEs de `infrastructure/repositories` y `presentation/http` actualizados. Verificado: `npx turbo run typecheck lint` → 13/13 en ambos, en verde a la primera.
+
+---
+
+## 2026-08-06 — Huecos de dominio para UC-002/UC-004 (Exercise.timer, INITIAL_RATING, puertos IdGenerator/Clock)
+
+**Input**: Antes de escribir tests para el primer Caso de Uso completo (`ValidateAnswerUseCase`/`UpdateDifficultyUseCase`, elegidos por el usuario vía AskUserQuestion sobre UC-005/UC-008), se detectaron 3 huecos de materialización al tipar las firmas reales.
+
+**Contexto utilizado**: `docs/ADR/ADR-004_domain.md:114` (ya asume `Exercise.timer` para derivar `AttemptResult.timeLimitMs`, pero `Exercise.ts` nunca lo llevó), `AdaptiveDifficultyEngine.test.ts` (usa 1200 como rating inicial de ejemplo, sin constante formal), ausencia total de un puerto para IDs/timestamps en `shared-domain` (ningún Caso de Uso lo había necesitado hasta ahora). Confirmado con el usuario vía AskUserQuestion: puertos `IdGenerator`/`Clock` (mismo patrón ports-and-adapters que los repositorios) en vez de `crypto.randomUUID()`/`new Date()` directos, para permitir fakes deterministas en tests.
+
+**Decisión tomada**: `Exercise.timer: Timer` añadido (cierra un hueco de materialización contra un ADR ya aprobado, no una decisión nueva); `INITIAL_RATING: Difficulty = { value: 1200 }` en `Difficulty.ts`; `packages/shared-domain/src/ports/{IdGenerator,Clock}.ts` (directorio nuevo, mismo nivel que `repositories/`).
+
+**Output generado**: `packages/shared-domain/src/entities/Exercise.ts`, `src/value-objects/Difficulty.ts`, `src/ports/{IdGenerator,Clock,README}.ts/.md`, `src/index.ts` (barrel actualizado).
+
+---
+
+## 2026-08-06 — Huecos de dominio para UC-003/UC-006 (Session.ratingAtStart, puerto HintUsageTracker)
+
+**Input**: El usuario pidió avanzar con UC-003 (Generate Hint) y UC-006 (End Session) — ambos descartados en la iteración anterior por huecos de diseño sin resolver. Se resuelven aquí en vez de diferirlos de nuevo, por indicación directa del usuario ("avanza con UC3 y UC6").
+
+**Contexto utilizado**: `packages/shared-types/src/dtos/Hint.ts` (nota de diseño ya existente: `hintsUsedSoFar` "requiere... un contador efimero por sesion+ejercicio, candidato Redis, ya previsto en la Cache Strategy de ARCHITECTURE.md" — confirma que el hueco ya estaba anticipado, no es una decisión nueva desde cero), `docs/use-cases/UC-006-end-session.md` (paso 2, "variación de userRating desde el inicio de la sesión" — no derivable de otro modo, los deltas de cada intento no se persisten individualmente), `ARCHITECTURE.md` (Backend API y AI Engine son apps/cajas separadas en el diagrama — la Application layer de `backend-api` no debe depender directamente de `apps/ai-engine`).
+
+**Decisión tomada**: `Session.ratingAtStart: Difficulty` (snapshot al crear la sesión, mismo patrón que `Exercise.timer` — campo requerido por un UC ya aprobado, no materializado hasta ahora). Puerto `HintUsageTracker` nuevo en `packages/shared-domain/src/ports` (mismo patrón que `IdGenerator`/`Clock`) para el contador efímero. Puerto `HintGenerator` definido localmente en `GenerateHintUseCase.ts` (no en `shared-domain`, porque es específico de este caso de uso, no reutilizado) para desacoplar la Application layer de `apps/ai-engine` — la implementación real (adaptador que invoque a `QwenClient`/`ai-engine`) queda diferida, mismo patrón que `Prisma*Repository`/Controllers.
+
+**Output generado**: `packages/shared-domain/src/entities/Session.ts`, `src/ports/{HintUsageTracker,README}.ts/.md`, `src/index.ts` (barrel actualizado).
+
+---
+
+## 2026-08-06 — Catálogo de Temas para UC-005/UC-008 (entidad Tema, TemaRepository)
+
+**Input**: El usuario pidió generar UC-005 (Start Session) y UC-008 (Select Next Exercise) — el último hueco pendiente del set de Casos de Uso, señalado en la iteración anterior: ninguno de los dos podía implementarse sin un puerto para el catálogo de Temas de ADR-006.
+
+**Contexto utilizado**: `docs/ADR/ADR-006_math_topics.md` ("Esquema de Tema", ya especifica exactamente `code`, `area: AreaCode`, `label`, `description`, `academicLevels: {level, difficultyRange}[]`, `prerequisites?` — se transcribe sin reinterpretar), su nota "Consecuencias/Negativas" (sin proceso formal de gobernanza de altas — confirma que el catálogo se puebla por seed/migración, no por un Caso de Uso, de ahí que el puerto no lleve `save`), `packages/shared-types/src/dtos/Exercise.ts` (`ExercisePublicDto` ya fija la forma pública de un Exercise sin `correctAnswer`/`difficulty`/`explanation` — replicada como tipo propio de Application en `SelectNextExerciseUseCase.ts`, sin importar el DTO para no invertir la dependencia Presentation→Application).
+
+**Decisión tomada**: `Tema`/`AreaCode` en `packages/shared-domain/src/entities/Tema.ts` (entidad de catálogo, con identidad vía `code`, no un Value Object). `TemaRepository` en `repositories/` (no en `ports/`, para mantener consistencia con el resto de contratos de persistencia) con un único método `findByCode` — sin `save`, decisión justificada arriba.
+
+**Output generado**: `packages/shared-domain/src/entities/Tema.ts`, `src/repositories/TemaRepository.ts`, `src/index.ts` (barrel actualizado).
+
+---
+
+## 2026-08-06 — QwenClient real: transporte, validación y alcance (adenda ADR-001)
+
+**Input**: El usuario preguntó si, para tener un `QwenClient` real, había que empezar a definir `apps/ai-engine` como puente entre backend y LangChain. Se identificaron 3 decisiones arquitectónicas abiertas repetidas en el código sin ratificar: transporte backend-api↔ai-engine, librería de validación en tiempo de ejecución del output de Qwen, y alcance de la tarea.
+
+**Contexto utilizado**: `ARCHITECTURE.md` (dibuja Backend API y AI Engine como cajas separadas pero nunca especifica transporte — sin "HTTP"/"REST"/"cola" en todo el documento), `apps/ai-engine/package.json` (sin Express/Fastify/cliente de colas — solo `langchain`), `.env.example` de `ai-engine` (`QWEN_API_KEY`/`QWEN_BASE_URL` ya placeholder, compatible con un endpoint estilo OpenAI), `docs/STATUS.md` #22 (decisión previa de esta misma sesión: `HintGenerator` como puerto, explícitamente no un import directo de `apps/ai-engine` desde Application — pero esa regla es de capa Application, no prohíbe que Infrastructure sí importe `ai-engine` como librería), nota repetida 4 veces en el código ("p. ej. zod", nunca ratificada), ADR-001 (precedente de decidir librerías "en el momento de implementar", ver Expo Router).
+
+**Decisión tomada** (confirmada vía AskUserQuestion): (1) transporte **import directo in-process** — sin servidor HTTP nuevo, sin cola, desproporcionado para un TFM sin evidencia de despliegue/escalado independiente; (2) **Zod** para validación de forma del output de Qwen, registrado como adenda en ADR-001; (3) alcance **QwenClient + adaptador `HintGenerator`** (cierra UC-003 de punta a punta), UC-001 queda fuera.
+
+**Output generado**: `docs/ADR-001_LenguajesMetodologias.md` (adenda 2026-08-06, sección Motor IA + Zod añadido a la lista de stack).
+
 **Output generado**: [docs/ADR/ADR-006_math_topics.md](../../docs/ADR/ADR-006_math_topics.md). Actualizados: `ADR-004_domain.md` (`Exercise.topic` tipado como `TemaCode`, ya no placeholder) y `STATUS.md` (pendiente #3 completado, Dominio al 100%).
