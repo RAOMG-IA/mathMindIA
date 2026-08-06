@@ -1,0 +1,135 @@
+// Ver docs/ADR/ADR-013_modelo_datos_fisico.md.
+// Declarativo -- sin logica ejecutable, no viola la TDD Enforcement Rule (ADR-003).
+// Pendiente: migraciones reales (requieren PostgreSQL vivo) e implementaciones de
+// repositorio (PrismaUserRepository, etc.), ambas esperan a Tests.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: la connection URL ya no vive aqui, se mueve a prisma.config.ts
+// (ver apps/backend-api/prisma.config.ts). https://pris.ly/d/config-datasource
+datasource db {
+  provider = "postgresql"
+}
+
+enum AcademicLevel {
+  Primaria
+  Secundaria
+  Bachillerato
+  Ingenieria
+}
+
+enum ExerciseType {
+  Test
+  Resolution
+}
+
+enum GeneratedBy {
+  AiBatch @map("ai-batch")
+  Manual  @map("manual")
+}
+
+// User (docs/ADR/ADR-004_domain.md). Credenciales (hash de contrasena) fuera de
+// alcance de este ADR -- se anadiran cuando se implemente US-001/US-002.
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  academicLevel AcademicLevel @map("academic_level")
+  currentStreak Int      @default(0) @map("current_streak")
+  scorePoints   Int      @default(0) @map("score_points")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  ratings  UserRating[]
+  sessions Session[]
+  answers  Answer[]
+
+  @@map("users")
+}
+
+// Un rating por AcademicLevel explorado (ADR-005) -- relacion 1:N, no una columna.
+model UserRating {
+  userId        String        @map("user_id")
+  academicLevel AcademicLevel @map("academic_level")
+  value         Float
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@id([userId, academicLevel])
+  @@map("user_ratings")
+}
+
+model Exercise {
+  id             String       @id @default(uuid())
+  type           ExerciseType
+  academicLevel  AcademicLevel @map("academic_level")
+  // TemaCode (docs/ADR/ADR-006_math_topics.md) -- string libre, no FK todavia
+  // (el catalogo de Temas no esta materializado como tabla, ver ADR-013 "Fuera de alcance").
+  topic          String
+  statement      String
+  // Solo si type = Test; exactamente 3 elementos (invariante de dominio, ADR-004,
+  // no forzado a nivel de schema).
+  options        String[]
+  correctAnswer  String       @map("correct_answer")
+  difficultyValue Float       @map("difficulty_value")
+  explanation    String
+  generatedBy    GeneratedBy  @map("generated_by")
+
+  answers Answer[]
+  hints   Hint[]
+
+  // Indice critico para UC-008 (Select Next Exercise): igualdad en academicLevel/topic,
+  // rango en difficultyValue -- ver ADR-013.
+  @@index([academicLevel, topic, difficultyValue])
+  @@map("exercises")
+}
+
+model Session {
+  id            String        @id @default(uuid())
+  userId        String        @map("user_id")
+  mode          ExerciseType
+  academicLevel AcademicLevel @map("academic_level")
+  startedAt     DateTime      @map("started_at")
+  endedAt       DateTime?     @map("ended_at")
+
+  user    User     @relation(fields: [userId], references: [id])
+  answers Answer[]
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Answer {
+  id             String   @id @default(uuid())
+  sessionId      String   @map("session_id")
+  exerciseId     String   @map("exercise_id")
+  // Desnormalizado desde session.userId (ver ADR-013) para soportar
+  // AnswerRepository.findByUserId (UC-007) sin JOIN en cada respuesta agregada.
+  userId         String   @map("user_id")
+  submittedValue String   @map("submitted_value")
+  isCorrect      Boolean  @map("is_correct")
+  responseTimeMs Int      @map("response_time_ms")
+  hintsUsed      Int      @default(0) @map("hints_used")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  session  Session  @relation(fields: [sessionId], references: [id])
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@index([sessionId])
+  @@index([userId])
+  @@map("answers")
+}
+
+model Hint {
+  id         String @id @default(uuid())
+  exerciseId String @map("exercise_id")
+  hintOrder  Int    @map("hint_order")
+  content    String
+
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+
+  // HintRepository.findByExerciseIdAndOrder (UC-003) -- unico por (exercise, order).
+  @@unique([exerciseId, hintOrder])
+  @@map("hints")
+}

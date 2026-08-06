@@ -1,0 +1,14 @@
+flowchart TD
+    A[Answer: correct, responseTime] --> ADE[Adaptive Difficulty Engine]
+    S[Current Streak] --> ADE
+    UR[userRating] --> ADE
+    ER[exerciseRating] --> ADE
+
+    ADE -->|"E = expected(userRating, exerciseRating)"| CALC[Calcular S y K]
+    CALC --> UPD_U[nextUserRating]
+    CALC --> UPD_E[nextExerciseRating]
+
+    UPD_U --> POOL[Exercise Pool]
+    UPD_E --> POOL
+
+    POOL -->|filtra por rating +/- banda| NEXT[Siguiente Ejercicio]

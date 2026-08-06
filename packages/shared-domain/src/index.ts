@@ -1,0 +1,24 @@
+export * from './value-objects/AcademicLevel.js'
+export * from './value-objects/Difficulty.js'
+export * from './value-objects/Score.js'
+export * from './value-objects/Timer.js'
+export * from './value-objects/ExerciseType.js'
+export * from './value-objects/TemaCode.js'
+
+export * from './entities/ids.js'
+export * from './entities/User.js'
+export * from './entities/Exercise.js'
+export * from './entities/Session.js'
+export * from './entities/Answer.js'
+export * from './entities/Hint.js'
+
+export * from './repositories/UserRepository.js'
+export * from './repositories/SessionRepository.js'
+export * from './repositories/AnswerRepository.js'
+export * from './repositories/HintRepository.js'
+export * from './repositories/ExerciseRepository.js'
+
+export * from './services/AdaptiveDifficultyEngine.js'
+
+// Achievement (docs/ADR/ADR-004_domain.md, funcionalidad futura) sigue sin
+// materializar -- ningun Caso de Uso implementado lo necesita todavia.
