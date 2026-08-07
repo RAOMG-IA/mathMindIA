@@ -41,6 +41,7 @@ function aSession(overrides: Partial<Session> = {}): Session {
     userId: 'user-1' as UserId,
     mode: 'Resolution',
     academicLevel: 'Secundaria',
+    topic: 'aritmetica-mental',
     ratingAtStart: { value: 1200 },
     startedAt: new Date('2026-01-01T00:00:00Z'),
     ...overrides,
@@ -92,6 +93,7 @@ describe('ValidateAnswerUseCase (UC-002)', () => {
 
     const result = await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       submittedValue: '4',
       responseTimeMs: 0,
@@ -123,6 +125,7 @@ describe('ValidateAnswerUseCase (UC-002)', () => {
 
     const result = await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       submittedValue: '5',
       responseTimeMs: 1000,
@@ -142,6 +145,7 @@ describe('ValidateAnswerUseCase (UC-002)', () => {
 
     const result = await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       submittedValue: '4',
       responseTimeMs: 10000,
@@ -161,6 +165,7 @@ describe('ValidateAnswerUseCase (UC-002)', () => {
     await expect(
       useCase.execute({
         sessionId: 'no-existe' as SessionId,
+        userId: 'user-1' as UserId,
         exerciseId: 'exercise-1' as ExerciseId,
         submittedValue: '4',
         responseTimeMs: 0,
@@ -177,6 +182,7 @@ describe('ValidateAnswerUseCase (UC-002)', () => {
     await expect(
       useCase.execute({
         sessionId: 'session-1' as SessionId,
+        userId: 'user-1' as UserId,
         exerciseId: 'exercise-1' as ExerciseId,
         submittedValue: '4',
         responseTimeMs: 0,
@@ -192,7 +198,25 @@ describe('ValidateAnswerUseCase (UC-002)', () => {
     await expect(
       useCase.execute({
         sessionId: 'session-1' as SessionId,
+        userId: 'user-1' as UserId,
         exerciseId: 'no-existe' as ExerciseId,
+        submittedValue: '4',
+        responseTimeMs: 0,
+        hintsUsed: 0,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('lanza si la Session pertenece a otro usuario (IDOR)', async () => {
+    await sessions.save(aSession({ userId: 'user-1' as UserId }))
+    await exercises.save(anExercise())
+    await users.save(aUser())
+
+    await expect(
+      useCase.execute({
+        sessionId: 'session-1' as SessionId,
+        userId: 'otro-usuario' as UserId,
+        exerciseId: 'exercise-1' as ExerciseId,
         submittedValue: '4',
         responseTimeMs: 0,
         hintsUsed: 0,

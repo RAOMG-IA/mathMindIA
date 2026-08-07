@@ -8,6 +8,7 @@ import type {
   IdGenerator,
   SessionId,
   SessionRepository,
+  UserId,
 } from '@mathmind/shared-domain'
 
 // Ver docs/use-cases/UC-003-generate-hint.md y docs/ADR/ADR-004_domain.md.
@@ -25,8 +26,11 @@ export interface HintGenerator {
   }): Promise<{ content: string }>
 }
 
+// userId: hueco de autorizacion detectado al mapear rutas (ARCHITECTURE.md, "API REST") --
+// sin esto, cualquier usuario autenticado podia pedir pistas sobre la Session de otro (IDOR).
 export interface GenerateHintInput {
   readonly sessionId: SessionId
+  readonly userId: UserId
   readonly exerciseId: ExerciseId
   readonly elapsedMs: number
 }
@@ -52,6 +56,9 @@ export class GenerateHintUseCase {
     const session = await this.sessions.findById(input.sessionId)
     if (!session || session.endedAt) {
       throw new Error(`No active session: ${input.sessionId}`)
+    }
+    if (session.userId !== input.userId) {
+      throw new Error(`Session ${input.sessionId} does not belong to user ${input.userId}`)
     }
 
     const exercise = await this.exercises.findById(input.exerciseId)

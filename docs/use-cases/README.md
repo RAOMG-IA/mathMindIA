@@ -16,11 +16,14 @@ Los nombres de clase (`XxxUseCase`) siguen los ejemplos ya fijados en [ARCHITECT
 | [UC-006](UC-006-end-session.md) | End Session | Usuario | US-006 |
 | [UC-007](UC-007-get-user-statistics.md) | Get User Statistics | Usuario | US-007 |
 | [UC-008](UC-008-select-next-exercise.md) | Select Next Exercise | Usuario (vía backend-api) | US-003, US-004 |
+| [UC-009](UC-009-register.md) | Register | Visitante | US-001 |
+| [UC-010](UC-010-login.md) | Login | Usuario registrado | US-002 |
 
 ## Notas de trazabilidad / desviaciones respecto a STATUS.md
 
 - **UC-001 se dividió en dos**: la lista original de STATUS.md tenía un único "UC-001 Generate Exercise" que mezclaba generación batch por IA (offline) y selección en tiempo real del siguiente ejercicio (determinista, sin IA — regla de [ARCHITECTURE.md](../../ARCHITECTURE.md) "la IA no participa en cada petición"). Son actores y triggers distintos, así que se mantiene **UC-001 Generate Exercise (Batch)** y se añade **UC-008 Select Next Exercise** para el flujo real que ocurre en cada sesión de usuario.
 - **UC-007 Get User Statistics es nuevo**: no existía en la lista original; cierra el hueco detectado al escribir [US-007](../user-stories/US-007-ver-estadisticas.md), que no tenía caso de uso asignado.
 - **UC-004 no repite las fórmulas**: su diseño algorítmico detallado (Expected score, factor K, actualización de ratings) ya está en [ADR-005](../ADR/ADR-005-adaptive-difficulty-engine.md); este documento solo da la especificación de caso de uso estándar y enlaza a ADR-005 como fuente autoritativa.
+- **UC-009/UC-010 son nuevos**: mismo motivo que UC-007 — [US-001](../user-stories/US-001-registro.md) y [US-002](../user-stories/US-002-login.md) nunca tuvieron Caso de Uso asignado, hueco detectado al empezar a construir los Controllers reales (`AuthController` no podía implementarse sin este diseño previo, TDD Enforcement Rule).
 
 Registrado en `.ai/prompts/architecture.md`.

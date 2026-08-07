@@ -23,6 +23,7 @@ function aSession(overrides: Partial<Session> = {}): Session {
     userId: 'user-1' as UserId,
     mode: 'Resolution',
     academicLevel: 'Secundaria',
+    topic: 'aritmetica-mental',
     ratingAtStart: { value: 1200 },
     startedAt: new Date('2026-01-01T00:00:00Z'),
     ...overrides,
@@ -88,6 +89,7 @@ describe('GenerateHintUseCase (UC-003)', () => {
   it('genera y persiste una pista nueva cuando no existe para ese order', async () => {
     const result = await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       elapsedMs: 10000,
     })
@@ -104,12 +106,14 @@ describe('GenerateHintUseCase (UC-003)', () => {
   it('incluye las pistas previas ya generadas al pedir una pista progresiva', async () => {
     await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       elapsedMs: 10000,
     })
 
     await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       elapsedMs: 10000,
     })
@@ -130,6 +134,7 @@ describe('GenerateHintUseCase (UC-003)', () => {
 
     const result = await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       elapsedMs: 10000,
     })
@@ -141,11 +146,13 @@ describe('GenerateHintUseCase (UC-003)', () => {
   it('incrementa order en pistas sucesivas dentro del mismo intento', async () => {
     const first = await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       elapsedMs: 10000,
     })
     const second = await useCase.execute({
       sessionId: 'session-1' as SessionId,
+      userId: 'user-1' as UserId,
       exerciseId: 'exercise-1' as ExerciseId,
       elapsedMs: 10000,
     })
@@ -160,6 +167,7 @@ describe('GenerateHintUseCase (UC-003)', () => {
     await expect(
       useCase.execute({
         sessionId: 'session-1' as SessionId,
+        userId: 'user-1' as UserId,
         exerciseId: 'exercise-test' as ExerciseId,
         elapsedMs: 10000,
       }),
@@ -170,6 +178,7 @@ describe('GenerateHintUseCase (UC-003)', () => {
     await expect(
       useCase.execute({
         sessionId: 'session-1' as SessionId,
+        userId: 'user-1' as UserId,
         exerciseId: 'exercise-1' as ExerciseId,
         elapsedMs: 5000,
       }),
@@ -180,6 +189,18 @@ describe('GenerateHintUseCase (UC-003)', () => {
     await expect(
       useCase.execute({
         sessionId: 'no-existe' as SessionId,
+        userId: 'user-1' as UserId,
+        exerciseId: 'exercise-1' as ExerciseId,
+        elapsedMs: 10000,
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('lanza si la Session pertenece a otro usuario (IDOR)', async () => {
+    await expect(
+      useCase.execute({
+        sessionId: 'session-1' as SessionId,
+        userId: 'otro-usuario' as UserId,
         exerciseId: 'exercise-1' as ExerciseId,
         elapsedMs: 10000,
       }),

@@ -11,10 +11,22 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import {
   InMemoryAnswerRepository,
   InMemoryExerciseRepository,
+  InMemoryTemaRepository,
   InMemoryUserRepository,
 } from '@mathmind/shared-testing'
-import type { Answer, AnswerId, Exercise, ExerciseId, SessionId, User, UserId } from '@mathmind/shared-domain'
+import type { Answer, AnswerId, Exercise, ExerciseId, SessionId, Tema, User, UserId } from '@mathmind/shared-domain'
 import { GetUserStatisticsUseCase } from './GetUserStatisticsUseCase.js'
+
+function aTema(overrides: Partial<Tema> = {}): Tema {
+  return {
+    code: 'aritmetica-mental',
+    area: 'arit',
+    label: 'Aritmetica mental',
+    description: 'Suma y resta mental',
+    academicLevels: [{ level: 'Secundaria', difficultyRange: { min: 800, max: 1600 } }],
+    ...overrides,
+  }
+}
 
 function anExercise(overrides: Partial<Exercise> = {}): Exercise {
   return {
@@ -63,13 +75,19 @@ describe('GetUserStatisticsUseCase (UC-007)', () => {
   let users: InMemoryUserRepository
   let answers: InMemoryAnswerRepository
   let exercises: InMemoryExerciseRepository
+  let temas: InMemoryTemaRepository
   let useCase: GetUserStatisticsUseCase
 
   beforeEach(() => {
     users = new InMemoryUserRepository()
     answers = new InMemoryAnswerRepository()
     exercises = new InMemoryExerciseRepository()
-    useCase = new GetUserStatisticsUseCase(users, answers, exercises)
+    temas = new InMemoryTemaRepository([
+      aTema({ code: 'aritmetica-mental', area: 'arit' }),
+      aTema({ code: 'fracciones', area: 'arit' }),
+      aTema({ code: 'porcentajes', area: 'arit' }),
+    ])
+    useCase = new GetUserStatisticsUseCase(users, answers, exercises, temas)
     answers.sessionOwners.set('session-1' as SessionId, 'user-1' as UserId)
   })
 
@@ -98,10 +116,12 @@ describe('GetUserStatisticsUseCase (UC-007)', () => {
     const result = await useCase.execute({ userId: 'user-1' as UserId })
 
     expect(result.score).toEqual({ points: 120 })
+    expect(result.academicLevel).toBe('Secundaria')
     expect(result.ratings.get('Secundaria')).toEqual({ value: 1250 })
 
     expect(result.topics).toHaveLength(3)
     const aritmetica = result.topics.find((t) => t.topic === 'aritmetica-mental')
+    expect(aritmetica?.area).toBe('arit')
     expect(aritmetica?.attempts).toBe(3)
     expect(aritmetica?.correctAttempts).toBe(2)
     expect(aritmetica?.accuracy).toBeCloseTo(0.6667, 3)
@@ -126,5 +146,13 @@ describe('GetUserStatisticsUseCase (UC-007)', () => {
 
   it('lanza si el User no existe', async () => {
     await expect(useCase.execute({ userId: 'no-existe' as UserId })).rejects.toThrow()
+  })
+
+  it('lanza si el Tema de un Exercise respondido no existe en el catalogo', async () => {
+    await users.save(aUser())
+    await exercises.save(anExercise({ id: 'raro-1' as ExerciseId, topic: 'tema-sin-catalogar' }))
+    await answers.save(anAnswer({ id: 'a1' as AnswerId, exerciseId: 'raro-1' as ExerciseId }))
+
+    await expect(useCase.execute({ userId: 'user-1' as UserId })).rejects.toThrow()
   })
 })

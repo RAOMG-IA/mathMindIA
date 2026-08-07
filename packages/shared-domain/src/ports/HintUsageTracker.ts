@@ -6,7 +6,9 @@ import type { ExerciseId, SessionId } from '../entities/ids.js'
 // packages/shared-types/src/dtos/Hint.ts (candidato de implementacion: Redis, ya previsto en
 // la Cache Strategy de ARCHITECTURE.md). ValidateAnswerUseCase (UC-002) sigue recibiendo
 // hintsUsed como input del llamador -- es responsabilidad de Presentation trasladar aqui el
-// valor leido de este tracker al crear el Answer final.
+// valor leido de este tracker al crear el Answer final. get() (sin incrementar) es lo que usa
+// AnswerController para leer el conteo actual antes de invocar ValidateAnswerUseCase.
 export interface HintUsageTracker {
   incrementAndGet(sessionId: SessionId, exerciseId: ExerciseId): Promise<number>
+  get(sessionId: SessionId, exerciseId: ExerciseId): Promise<number>
 }

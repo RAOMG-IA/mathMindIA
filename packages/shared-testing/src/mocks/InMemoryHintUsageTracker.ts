@@ -14,4 +14,8 @@ export class InMemoryHintUsageTracker implements HintUsageTracker {
     this.counts.set(key, next)
     return next
   }
+
+  async get(sessionId: SessionId, exerciseId: ExerciseId): Promise<number> {
+    return this.counts.get(this.key(sessionId, exerciseId)) ?? 0
+  }
 }

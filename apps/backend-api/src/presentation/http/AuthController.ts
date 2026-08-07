@@ -4,13 +4,33 @@ import type {
   RegisterRequestDto,
   RegisterResponseDto,
 } from '@mathmind/shared-types'
+import type { LoginUseCase } from '../../application/use-cases/LoginUseCase.js'
+import type { RegisterUseCase } from '../../application/use-cases/RegisterUseCase.js'
 
 // Presentation layer -- traduce DTOs (packages/shared-types) a llamadas de Casos
-// de Uso (US-001 Registro, US-002 Login). No conoce Express directamente: el
+// de Uso (UC-009 Register, UC-010 Login). No conoce Express directamente: el
 // adaptador HTTP (routes) mapea Request/Response a estos DTOs.
-// Sin cuerpo todavia -- pendiente de Tests (ADR-003) y de los propios Casos de
-// Uso en application/use-cases, todavia sin implementar.
-export declare class AuthController {
-  register(request: RegisterRequestDto): Promise<RegisterResponseDto>
-  login(request: LoginRequestDto): Promise<LoginResponseDto>
+//
+export class AuthController {
+  constructor(
+    private readonly registerUseCase: RegisterUseCase,
+    private readonly loginUseCase: LoginUseCase,
+  ) {}
+
+  async register(request: RegisterRequestDto): Promise<RegisterResponseDto> {
+    const result = await this.registerUseCase.execute({
+      email: request.email,
+      password: request.password,
+      academicLevel: request.academicLevel,
+    })
+    return { userId: result.userId, sessionToken: result.sessionToken }
+  }
+
+  async login(request: LoginRequestDto): Promise<LoginResponseDto> {
+    const result = await this.loginUseCase.execute({
+      email: request.email,
+      password: request.password,
+    })
+    return { userId: result.userId, sessionToken: result.sessionToken }
+  }
 }

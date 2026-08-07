@@ -3,16 +3,20 @@ import type {
   Clock,
   SessionId,
   SessionRepository,
+  UserId,
   UserRepository,
 } from '@mathmind/shared-domain'
-import { INITIAL_RATING } from '@mathmind/shared-domain'
+import { SEED_RATING_BY_LEVEL } from '@mathmind/shared-domain'
 
 // Ver docs/use-cases/UC-006-end-session.md y docs/ADR/ADR-004_domain.md.
 // La variacion de rating se calcula contra Session.ratingAtStart (snapshot tomado por
 // StartSessionUseCase, UC-005, todavia sin implementar) -- ningun otro sitio del dominio
 // persiste los deltas individuales de cada intento (ver UpdateDifficultyUseCase).
+// userId: hueco de autorizacion detectado al mapear rutas (ARCHITECTURE.md, "API REST") --
+// sin esto, cualquier usuario autenticado podia finalizar la Session de otro (IDOR).
 export interface EndSessionInput {
   readonly sessionId: SessionId
+  readonly userId: UserId
 }
 
 export interface EndSessionOutput {
@@ -35,6 +39,9 @@ export class EndSessionUseCase {
     if (!session || session.endedAt) {
       throw new Error(`No active session: ${input.sessionId}`)
     }
+    if (session.userId !== input.userId) {
+      throw new Error(`Session ${input.sessionId} does not belong to user ${input.userId}`)
+    }
 
     const sessionAnswers = await this.answers.findBySessionId(input.sessionId)
     const totalAnswers = sessionAnswers.length
@@ -45,7 +52,8 @@ export class EndSessionUseCase {
         : sessionAnswers.reduce((sum, answer) => sum + answer.responseTimeMs, 0) / totalAnswers
 
     const user = await this.users.findById(session.userId)
-    const currentRating = user?.ratings.get(session.academicLevel) ?? INITIAL_RATING
+    const currentRating =
+      user?.ratings.get(session.academicLevel) ?? SEED_RATING_BY_LEVEL[session.academicLevel]
     const ratingChange = currentRating.value - session.ratingAtStart.value
 
     await this.sessions.save({ ...session, endedAt: this.clock.now() })

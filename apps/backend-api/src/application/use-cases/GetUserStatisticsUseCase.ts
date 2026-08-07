@@ -1,12 +1,15 @@
 import type {
   AcademicLevel,
   AnswerRepository,
+  AreaCode,
   Difficulty,
   Exercise,
   ExerciseId,
   ExerciseRepository,
   Score,
+  Tema,
   TemaCode,
+  TemaRepository,
   UserId,
   UserRepository,
 } from '@mathmind/shared-domain'
@@ -22,16 +25,23 @@ export interface GetUserStatisticsInput {
   readonly userId: UserId
 }
 
+// area: hueco detectado al mapear GetUserStatisticsResponseDto (packages/shared-types/src/dtos/Statistics.ts,
+// TopicStatDto.area) -- requiere resolver el Tema del catalogo (ADR-006), de ahi TemaRepository
+// como dependencia nueva.
 export interface TopicStats {
   readonly topic: TemaCode
+  readonly area: AreaCode
   readonly attempts: number
   readonly correctAttempts: number
   readonly accuracy: number
   readonly avgResponseTimeMs: number
 }
 
+// academicLevel: mismo hueco -- GetUserStatisticsResponseDto.academicLevel es el nivel actual
+// del usuario, no derivable de `ratings` (mapa de todos los niveles explorados).
 export interface GetUserStatisticsOutput {
   readonly score: Score
+  readonly academicLevel: AcademicLevel
   readonly ratings: ReadonlyMap<AcademicLevel, Difficulty>
   readonly topics: readonly TopicStats[]
   readonly strengths: readonly TopicStats[]
@@ -49,6 +59,7 @@ export class GetUserStatisticsUseCase {
     private readonly users: UserRepository,
     private readonly answers: AnswerRepository,
     private readonly exercises: ExerciseRepository,
+    private readonly temas: TemaRepository,
   ) {}
 
   async execute(input: GetUserStatisticsInput): Promise<GetUserStatisticsOutput> {
@@ -76,18 +87,39 @@ export class GetUserStatisticsUseCase {
       byTopic.set(exercise.topic, bucket)
     }
 
-    const topics: TopicStats[] = [...byTopic.entries()].map(([topic, bucket]) => ({
-      topic,
-      attempts: bucket.attempts,
-      correctAttempts: bucket.correct,
-      accuracy: bucket.correct / bucket.attempts,
-      avgResponseTimeMs: bucket.totalResponseTimeMs / bucket.attempts,
-    }))
+    const temaByCode = new Map<TemaCode, Tema | null>()
+    const topics: TopicStats[] = []
+    for (const [topic, bucket] of byTopic.entries()) {
+      let tema = temaByCode.get(topic)
+      if (tema === undefined) {
+        tema = await this.temas.findByCode(topic)
+        temaByCode.set(topic, tema)
+      }
+      if (!tema) {
+        throw new Error(`Tema not found in catalog: ${topic}`)
+      }
+
+      topics.push({
+        topic,
+        area: tema.area,
+        attempts: bucket.attempts,
+        correctAttempts: bucket.correct,
+        accuracy: bucket.correct / bucket.attempts,
+        avgResponseTimeMs: bucket.totalResponseTimeMs / bucket.attempts,
+      })
+    }
 
     const eligible = topics.filter((topic) => topic.attempts >= MIN_ATTEMPTS_PER_TOPIC)
     const strengths = [...eligible].sort((a, b) => b.accuracy - a.accuracy).slice(0, TOP_N)
     const weaknesses = [...eligible].sort((a, b) => a.accuracy - b.accuracy).slice(0, TOP_N)
 
-    return { score: user.score, ratings: user.ratings, topics, strengths, weaknesses }
+    return {
+      score: user.score,
+      academicLevel: user.academicLevel,
+      ratings: user.ratings,
+      topics,
+      strengths,
+      weaknesses,
+    }
   }
 }

@@ -7,7 +7,7 @@ import type {
   UserId,
   UserRepository,
 } from '@mathmind/shared-domain'
-import { INITIAL_RATING } from '@mathmind/shared-domain'
+import { SEED_RATING_BY_LEVEL } from '@mathmind/shared-domain'
 
 // Ver docs/use-cases/UC-008-select-next-exercise.md y docs/ADR/ADR-005-adaptive-difficulty-engine.md
 // (banda de seleccion +-150, ampliada a +-300 en el flujo alternativo 2a). Determinista, sin IA
@@ -48,7 +48,7 @@ export class SelectNextExerciseUseCase {
       throw new Error(`User not found: ${input.userId}`)
     }
 
-    const userRating = user.ratings.get(input.academicLevel) ?? INITIAL_RATING
+    const userRating = user.ratings.get(input.academicLevel) ?? SEED_RATING_BY_LEVEL[input.academicLevel]
 
     const narrow = await this.exercises.findByDifficultyBand({
       academicLevel: input.academicLevel,

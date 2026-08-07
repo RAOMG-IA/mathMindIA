@@ -230,4 +230,28 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 
 **Output generado**: `ARCHITECTURE.md` (nueva sección "API REST (Rutas)"), `packages/shared-types/src/dtos/Hint.ts` (`elapsedMs` añadido), `apps/backend-api/src/presentation/http/SessionController.ts` (`userId` añadido a `startSession`). Verificado: `npx turbo run typecheck lint` → 23/23 en verde (solo cambios de contrato/tipos, sin lógica).
 
+---
+
+## 2026-08-07 — Backend real: UC-009/UC-010, puertos de auth, corrección de SEED_RATING_BY_LEVEL
+
+**Input**: "comenzamos con el backend" — construir los Controllers reales + Express siguiendo el mapa de rutas ya definido. Antes de tocar Presentation, se detectó que `AuthController` no tenía Caso de Uso que invocar: US-001/US-002 nunca tuvieron UC asignado (mismo motivo que UC-007 en su momento).
+
+**Contexto utilizado**: `docs/user-stories/US-001-registro.md`/`US-002-login.md` (AC exactos: mensaje de error genérico en login, semilla de rating al registrarse), ADR-004 ("las credenciales... quedan fuera de alcance [de User], responsabilidad de backend-api" — decisión original, nunca materializada), ADR-012 (hash bcrypt/argon2, JWT nombrado explícitamente como "futuras claves de firma"), ADR-005 (tabla de semillas por `AcademicLevel`, descubierta al implementar el sembrado real: Primaria 800, Secundaria 1200, Bachillerato 1600, Ingeniería 2000 — no un valor único).
+
+**Decisión tomada**: UC-009 Register / UC-010 Login (nuevos docs de caso de uso). Puertos `PasswordHasher`/`TokenIssuer` en `packages/shared-domain/src/ports`, entidad `UserCredentials` + `UserCredentialsRepository` deliberadamente separados de `User`. **Bug real corregido, no solo hueco**: `INITIAL_RATING` (constante plana 1200) se sustituye por `SEED_RATING_BY_LEVEL: Record<AcademicLevel, Difficulty>` — el valor plano solo coincidía por casualidad con la semilla de `Secundaria`; para `Primaria`/`Bachillerato`/`Ingeniería` sembraba el rating equivocado. 4 consumidores actualizados (`ValidateAnswerUseCase`, `EndSessionUseCase`, `SelectNextExerciseUseCase`, `StartSessionUseCase`); verificado que ningún test existente cambiaba de resultado (todos usaban `Secundaria`).
+
+**Output generado**: `docs/use-cases/UC-009-register.md`, `UC-010-login.md` (+ índice actualizado), `packages/shared-domain/src/{entities/UserCredentials.ts,repositories/UserCredentialsRepository.ts,ports/{PasswordHasher,TokenIssuer}.ts}`, `packages/shared-domain/src/value-objects/Difficulty.ts` (`SEED_RATING_BY_LEVEL`).
+
+---
+
+## 2026-08-07 — Huecos detectados construyendo Controllers reales (IDOR, Session.topic, HintUsageTracker.get, GetUserStatisticsUseCase)
+
+**Input**: continuación directa del backend real — construir los 5 Controllers surgió cuatro huecos más, cada uno al intentar mapear un DTO/flujo ya diseñado contra la implementación real existente.
+
+**Contexto utilizado**: `ARCHITECTURE.md` "API REST" (hueco IDOR ya señalado como pendiente en la entrada anterior, sin corregir entonces por estar fuera de la restricción "no implementar" de esta skill), `packages/shared-types/src/dtos/Answer.ts` (comentario propio: "UC-002 y UC-008... composición a nivel de contrato HTTP" — confirma que `AnswerController`, no `ValidateAnswerUseCase`, es quien debe invocar UC-008 tras cada respuesta), `packages/shared-types/src/dtos/Statistics.ts` (`TopicStatDto.area`, `academicLevel` — campos que `GetUserStatisticsOutput` no producía).
+
+**Decisión tomada**: (1) IDOR — `EndSessionUseCase`/`ValidateAnswerUseCase`/`GenerateHintUseCase` ganan `userId` en su input, verifican `session.userId === input.userId`. (2) `Session.topic: TemaCode` añadido a la entidad (mismo patrón que `Exercise.timer`/`Session.ratingAtStart`) — sin esto, `AnswerController` no podía saber qué tema seguir sirviendo tras el primer ejercicio de la sesión. (3) `HintUsageTracker.get` (lectura sin incrementar) añadido al puerto — `AnswerController` necesita leer `hintsUsed` sin alterar el contador, y sin confiar en que el cliente lo reporte. (4) `GetUserStatisticsUseCase` gana `TemaRepository` como dependencia para resolver `area` por tema y `academicLevel` (nivel actual del usuario) en su output.
+
+**Output generado**: `packages/shared-domain/src/entities/Session.ts`, `src/ports/HintUsageTracker.ts`, `apps/backend-api/src/application/use-cases/{EndSessionUseCase,ValidateAnswerUseCase,GenerateHintUseCase,GetUserStatisticsUseCase,StartSessionUseCase}.ts` (todos ya Green, actualizados con nuevas verificaciones/dependencias y sus tests).
+
 **Output generado**: [docs/ADR/ADR-006_math_topics.md](../../docs/ADR/ADR-006_math_topics.md). Actualizados: `ADR-004_domain.md` (`Exercise.topic` tipado como `TemaCode`, ya no placeholder) y `STATUS.md` (pendiente #3 completado, Dominio al 100%).

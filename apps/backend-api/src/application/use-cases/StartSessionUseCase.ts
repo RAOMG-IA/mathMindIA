@@ -11,7 +11,7 @@ import type {
   UserId,
   UserRepository,
 } from '@mathmind/shared-domain'
-import { INITIAL_RATING } from '@mathmind/shared-domain'
+import { SEED_RATING_BY_LEVEL } from '@mathmind/shared-domain'
 import type { SelectableExercise, SelectNextExerciseUseCase } from './SelectNextExerciseUseCase.js'
 
 // Ver docs/use-cases/UC-005-start-session.md y docs/ADR/ADR-006_math_topics.md (catalogo de
@@ -57,7 +57,8 @@ export class StartSessionUseCase {
       userId: input.userId,
       mode: input.mode,
       academicLevel: input.academicLevel,
-      ratingAtStart: user.ratings.get(input.academicLevel) ?? INITIAL_RATING,
+      topic: input.topic,
+      ratingAtStart: user.ratings.get(input.academicLevel) ?? SEED_RATING_BY_LEVEL[input.academicLevel],
       startedAt: this.clock.now(),
     }
     await this.sessions.save(session)

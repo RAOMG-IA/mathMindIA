@@ -96,6 +96,7 @@ describe('StartSessionUseCase (UC-005)', () => {
 
     expect(result.session.id).toBe('session-1')
     expect(result.session.userId).toBe('user-1')
+    expect(result.session.topic).toBe('aritmetica-mental')
     expect(result.session.ratingAtStart).toEqual({ value: 1200 })
     expect(result.session.startedAt).toEqual(now)
     expect(result.session.endedAt).toBeUndefined()
