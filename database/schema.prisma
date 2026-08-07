@@ -1,7 +1,6 @@
-// Ver docs/ADR/ADR-013_modelo_datos_fisico.md.
+// Ver docs/ADR/ADR-013_modelo_datos_fisico.md (adenda: UserCredentials, Session.topic/
+// ratingAtStart, Exercise.timeLimitMs).
 // Declarativo -- sin logica ejecutable, no viola la TDD Enforcement Rule (ADR-003).
-// Pendiente: migraciones reales (requieren PostgreSQL vivo) e implementaciones de
-// repositorio (PrismaUserRepository, etc.), ambas esperan a Tests.
 
 generator client {
   provider = "prisma-client-js"
@@ -30,8 +29,7 @@ enum GeneratedBy {
   Manual  @map("manual")
 }
 
-// User (docs/ADR/ADR-004_domain.md). Credenciales (hash de contrasena) fuera de
-// alcance de este ADR -- se anadiran cuando se implemente US-001/US-002.
+// User (docs/ADR/ADR-004_domain.md).
 model User {
   id            String   @id @default(uuid())
   email         String   @unique
@@ -40,11 +38,24 @@ model User {
   scorePoints   Int      @default(0) @map("score_points")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  ratings  UserRating[]
-  sessions Session[]
-  answers  Answer[]
+  ratings     UserRating[]
+  sessions    Session[]
+  answers     Answer[]
+  credentials UserCredentials?
 
   @@map("users")
+}
+
+// Credenciales (hash de contrasena, UC-009/UC-010) -- deliberadamente fuera del
+// agregado User (ADR-004), 1:1 via userId. Ver docs/ADR/ADR-013_modelo_datos_fisico.md
+// (adenda) y packages/shared-domain/src/entities/UserCredentials.ts.
+model UserCredentials {
+  userId       String @id @map("user_id")
+  passwordHash String @map("password_hash")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_credentials")
 }
 
 // Un rating por AcademicLevel explorado (ADR-005) -- relacion 1:N, no una columna.
@@ -72,6 +83,9 @@ model Exercise {
   options        String[]
   correctAnswer  String       @map("correct_answer")
   difficultyValue Float       @map("difficulty_value")
+  // Exercise.timer.limitMs (hueco detectado al construir UC-003, ver STATUS.md #22) --
+  // nunca se materializo en el schema hasta ahora.
+  timeLimitMs    Int          @map("time_limit_ms")
   explanation    String
   generatedBy    GeneratedBy  @map("generated_by")
 
@@ -89,6 +103,12 @@ model Session {
   userId        String        @map("user_id")
   mode          ExerciseType
   academicLevel AcademicLevel @map("academic_level")
+  // TemaCode (ADR-006), string libre -- mismo criterio que Exercise.topic. Hueco
+  // detectado al construir AnswerController (ver STATUS.md #27), nunca materializado.
+  topic         String
+  // Snapshot del rating al crear la Session (UC-006, ver STATUS.md #22) -- base para
+  // calcular ratingChange al finalizar. Tambien sin materializar hasta ahora.
+  ratingAtStart Float         @map("rating_at_start")
   startedAt     DateTime      @map("started_at")
   endedAt       DateTime?     @map("ended_at")
 

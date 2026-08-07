@@ -63,6 +63,18 @@ enum GeneratedBy {
 }
 ```
 
+## Adenda (2026-08-07): UserCredentials, Session.topic/ratingAtStart, Exercise.timeLimitMs
+
+Al abordar la implementación real de los `Prisma*Repository` (hasta ahora `declare class` sin cuerpo), la exploración previa detectó que el schema físico se había quedado desactualizado respecto al modelo de dominio que evolucionó durante la sesión: tres campos que ya existen en las entidades TypeScript de `packages/shared-domain` nunca se materializaron aquí. Implementar los repositorios contra el schema tal cual estaba habría perdido esos campos en cada `save()` — no un hueco de diseño, un bug de persistencia.
+
+**Nuevo modelo `UserCredentials`** (`user_credentials`): este ADR (línea 33-34, versión original) dejó explícitamente las credenciales fuera de alcance "hasta que se implemente US-001/US-002". Esos dos casos de uso (UC-009 Register, UC-010 Login) ya están implementados — se añade `userId String @id`, `passwordHash String`, relación 1:1 con `User`, mismo criterio de separación deliberada del agregado `User` ya fijado en ADR-004.
+
+**`Session.topic` y `Session.ratingAtStart`**: añadidos a la entidad de dominio al resolver huecos de UC-008 (continuidad de tema tras el primer ejercicio) y UC-006 (snapshot de rating al iniciar sesión) — ver `STATUS.md` #22 y #27 — pero nunca llegaron al schema físico.
+
+**`Exercise.timeLimitMs`**: mismo caso — `Exercise.timer.limitMs` existe en el dominio desde UC-002/UC-004 (`STATUS.md` #20), sin columna equivalente hasta ahora.
+
+Actualiza el mapeo de entidades a tablas de la sección "Decisión" (arriba): `User` pasa a mapear también a `user_credentials` (1:1), y `exercises`/`sessions` ganan las columnas anteriores. No cambia ninguna decisión ya tomada (ORM, ubicación, UUIDs, índice de `exercises`, desnormalización de `answers.user_id`) — solo completa el modelo con lo que el dominio ya había decidido en el camino.
+
 ## Consecuencias
 
 ### Positivas
@@ -78,8 +90,7 @@ enum GeneratedBy {
 
 ## Fuera de alcance
 
-- Migraciones reales (`prisma migrate dev`) — requieren una instancia de PostgreSQL viva, no se ejecutan en este ADR.
-- Implementaciones concretas de los repositorios (`PrismaUserRepository`, etc.) — código con lógica real, sigue esperando a Tests (ADR-003).
+- ~~Migraciones reales (`prisma migrate dev`)~~ y ~~implementaciones concretas de los repositorios (`PrismaUserRepository`, etc.)~~ — abordadas en la adenda 2026-08-07 de arriba, ya con Tests (ADR-003).
 - Seed data / datos de prueba.
 - Materializar el catálogo de Temas (ADR-006) como tabla `temas` con FK desde `exercises`.
 - `docker-compose.yml` para levantar PostgreSQL/Redis local — sigue vacío, es tarea de DevOps Agent.

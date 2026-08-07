@@ -254,4 +254,18 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 
 **Output generado**: `packages/shared-domain/src/entities/Session.ts`, `src/ports/HintUsageTracker.ts`, `apps/backend-api/src/application/use-cases/{EndSessionUseCase,ValidateAnswerUseCase,GenerateHintUseCase,GetUserStatisticsUseCase,StartSessionUseCase}.ts` (todos ya Green, actualizados con nuevas verificaciones/dependencias y sus tests).
 
+---
+
+## 2026-08-07 — Schema físico real: UserCredentials, Session.topic/ratingAtStart, Exercise.timeLimitMs (adenda ADR-013)
+
+**Input**: el usuario eligió como siguiente paso implementar los `Prisma*Repository` reales. Antes de tocar código de repositorio, exploración del estado actual (`database/schema.prisma`, entidades de dominio) detectó que el schema físico se había quedado desactualizado.
+
+**Contexto utilizado**: `packages/shared-domain/src/entities/{Session,Exercise,UserCredentials}.ts` (campos ya existentes en el dominio: `Session.topic`/`ratingAtStart`, `Exercise.timer.limitMs`, entidad `UserCredentials` completa), `database/schema.prisma` (comentario propio: "Credenciales... fuera de alcance... hasta que se implemente US-001/US-002" — ya implementados), `docs/ADR/ADR-013_modelo_datos_fisico.md` (decisión original de mapeo entidad→tabla).
+
+**Decisión tomada**: nuevo modelo `UserCredentials` (`user_credentials`, 1:1 con `User`, mismo criterio de separación de ADR-004). `Session` gana `topic String` y `ratingAtStart Float`. `Exercise` gana `timeLimitMs Int`. Ninguna decisión previa de ADR-013 (ORM, UUIDs, índice de `exercises`, desnormalización de `answers.user_id`) cambia — solo se completa el modelo con lo que el dominio ya había decidido. Adenda añadida a ADR-013 en vez de un ADR nuevo (mismo criterio que las adendas de ADR-001/ADR-002 esta sesión). Verificado: `npx prisma validate` → schema válido.
+
+**Output generado**: `database/schema.prisma`, `docs/ADR/ADR-013_modelo_datos_fisico.md` (adenda).
+
+---
+
 **Output generado**: [docs/ADR/ADR-006_math_topics.md](../../docs/ADR/ADR-006_math_topics.md). Actualizados: `ADR-004_domain.md` (`Exercise.topic` tipado como `TemaCode`, ya no placeholder) y `STATUS.md` (pendiente #3 completado, Dominio al 100%).

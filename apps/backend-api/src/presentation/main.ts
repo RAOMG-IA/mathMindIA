@@ -1,15 +1,6 @@
 import 'dotenv/config'
 import express from 'express'
-import {
-  InMemoryAnswerRepository,
-  InMemoryExerciseRepository,
-  InMemoryHintRepository,
-  InMemoryHintUsageTracker,
-  InMemorySessionRepository,
-  InMemoryTemaRepository,
-  InMemoryUserCredentialsRepository,
-  InMemoryUserRepository,
-} from '@mathmind/shared-testing'
+import { InMemoryHintUsageTracker, InMemoryTemaRepository } from '@mathmind/shared-testing'
 import { LangChainQwenModel, QwenClient } from '@mathmind/ai-engine'
 import type { ExerciseId } from '@mathmind/shared-domain'
 import { createRoutes } from './http/routes.js'
@@ -21,6 +12,13 @@ import { StatisticsController } from './http/StatisticsController.js'
 import { BcryptPasswordHasher } from '../infrastructure/auth/BcryptPasswordHasher.js'
 import { JwtTokenIssuer } from '../infrastructure/auth/JwtTokenIssuer.js'
 import { QwenHintGenerator } from '../infrastructure/ai/QwenHintGenerator.js'
+import { createPrismaClient } from '../infrastructure/persistence/prismaClient.js'
+import { PrismaUserRepository } from '../infrastructure/repositories/PrismaUserRepository.js'
+import { PrismaUserCredentialsRepository } from '../infrastructure/repositories/PrismaUserCredentialsRepository.js'
+import { PrismaSessionRepository } from '../infrastructure/repositories/PrismaSessionRepository.js'
+import { PrismaExerciseRepository } from '../infrastructure/repositories/PrismaExerciseRepository.js'
+import { PrismaAnswerRepository } from '../infrastructure/repositories/PrismaAnswerRepository.js'
+import { PrismaHintRepository } from '../infrastructure/repositories/PrismaHintRepository.js'
 import { RegisterUseCase } from '../application/use-cases/RegisterUseCase.js'
 import { LoginUseCase } from '../application/use-cases/LoginUseCase.js'
 import { StartSessionUseCase } from '../application/use-cases/StartSessionUseCase.js'
@@ -31,31 +29,38 @@ import { GenerateHintUseCase } from '../application/use-cases/GenerateHintUseCas
 import { GetUserStatisticsUseCase } from '../application/use-cases/GetUserStatisticsUseCase.js'
 import { SelectNextExerciseUseCase } from '../application/use-cases/SelectNextExerciseUseCase.js'
 
-// Composicion (wiring puro, sin logica propia -- ver routes.ts). NOTA: usa los repositorios en
-// memoria de @mathmind/shared-testing en vez de Prisma*Repository -- estas ultimas siguen
-// siendo `declare class` sin cuerpo (Database sigue bloqueada, ver STATUS.md). Esto hace que el
-// servidor arranque y sea probable manualmente end-to-end, pero SIN persistencia real entre
-// reinicios -- swap a Prisma es el siguiente paso de Infrastructure, no un cambio de esta capa
-// de wiring (las Use Cases ya dependen solo de las interfaces de shared-domain).
+// Composicion (wiring puro, sin logica propia -- ver routes.ts). Repositorios reales sobre
+// Postgres (Prisma) para User/Session/Answer/Hint/Exercise/UserCredentials -- ver
+// docs/ADR/ADR-013_modelo_datos_fisico.md. TemaRepository se queda en memoria (catalogo de
+// ADR-006 sin materializar como tabla, fuera de alcance de ese ADR).
 const JWT_SECRET = process.env.JWT_SECRET
 if (!JWT_SECRET) {
   throw new Error('JWT_SECRET is required (see .env.example)')
 }
 
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL is required (see .env.example)')
+}
+
 const QWEN_API_KEY = process.env.QWEN_API_KEY
 const QWEN_BASE_URL = process.env.QWEN_BASE_URL
 
-const users = new InMemoryUserRepository()
-const credentials = new InMemoryUserCredentialsRepository()
-const sessions = new InMemorySessionRepository()
-const exercises = new InMemoryExerciseRepository()
-const answers = new InMemoryAnswerRepository()
-const hints = new InMemoryHintRepository()
+const prisma = createPrismaClient(DATABASE_URL)
+const users = new PrismaUserRepository(prisma)
+const credentials = new PrismaUserCredentialsRepository(prisma)
+const sessions = new PrismaSessionRepository(prisma)
+const exercises = new PrismaExerciseRepository(prisma)
+const answers = new PrismaAnswerRepository(prisma)
+const hints = new PrismaHintRepository(prisma)
 const hintUsage = new InMemoryHintUsageTracker()
 
 // Seed minimo para poder arrancar y probar manualmente (no es el catalogo real de ADR-006 --
 // eso requiere la migracion/seed real de Infrastructure, todavia sin hacer). Sin esto,
-// POST /sessions falla siempre (ningun Tema existe).
+// POST /sessions falla siempre (ningun Tema existe). El Tema sigue en memoria (ver comentario
+// de arriba); el Exercise si es persistido de verdad -- se espera (await, no fire-and-forget)
+// porque ahora es una escritura real a red/DB, no una Map sincrona (hallazgo de Reviewer sobre
+// el `void` original, ver STATUS.md).
 const temas = new InMemoryTemaRepository([
   {
     code: 'arit.suma-resta',
@@ -65,8 +70,13 @@ const temas = new InMemoryTemaRepository([
     academicLevels: [{ level: 'Primaria', difficultyRange: { min: 500, max: 750 } }],
   },
 ])
-void exercises.save({
-  id: crypto.randomUUID() as ExerciseId,
+// Id fijo (no crypto.randomUUID()): save() es upsert, un id estable hace que reiniciar el
+// servidor actualice esta misma fila en vez de acumular un Exercise duplicado en cada arranque
+// (hueco detectado al conectar este seed a persistencia real -- con InMemory no importaba,
+// se perdia entero al reiniciar).
+const SEED_EXERCISE_ID = '00000000-0000-0000-0000-000000000001' as ExerciseId
+await exercises.save({
+  id: SEED_EXERCISE_ID,
   type: 'Resolution',
   academicLevel: 'Primaria',
   topic: 'arit.suma-resta',

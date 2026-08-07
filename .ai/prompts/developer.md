@@ -109,4 +109,26 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Decisión tomada**: (1) nuevo `errorMapping.ts` — función pura `mapUseCaseError(error, exposeMessage)`, testeada de verdad (a diferencia de `routes.ts`, que sigue siendo wiring sin tests): `exposeMessage=false` colapsa cualquier error a un mensaje genérico + 403, usado en `/sessions/end`, `/answers`, `/hints` (las tres rutas cuyos Casos de Uso verifican propiedad de una `Session`); `exposeMessage=true` mantiene el comportamiento anterior donde el mensaje es contenido de producto pretendido (registro, login, iniciar sesión, estadísticas). (2) `RegisterUseCase`: `MIN_PASSWORD_LENGTH=8` (OWASP ASVS L1), verificado antes de tocar cualquier repositorio — tests existentes con contraseñas de 1 carácter actualizados a 8+. (3) `JwtTokenIssuer.verify`: `algorithms: ['HS256']` explícito — confirmado con un test que jsonwebtoken ya rechazaba `alg=none` incluso sin el fix (defensa en profundidad, no corrección de una vulnerabilidad explotable hoy).
 
+---
+
+## 2026-08-07 — Prisma*Repository real (6 clases, TDD Green) + wiring de main.ts
+
+**Input**: continuación sin pausa tras el Red de los 23 tests de integración (Test Agent). Implementar los 6 repositorios y conectar `main.ts` a Postgres real.
+
+**Contexto utilizado**: los 23 `.integration.test.ts` (especificación real a satisfacer), `database/schema.prisma` (mapeo de columnas, incluida la adenda de este mismo día), los dobles `InMemory*` (semántica de referencia).
+
+**Decisión tomada**: mapeo campo a campo entre entidades de dominio y filas de Prisma, con dos judgment calls documentados:
+- **`PrismaAnswerRepository.save`**: el dominio `Answer` no lleva `userId`, pero la columna desnormalizada `answers.user_id` (ADR-013) lo necesita. Resuelto con una lectura extra (`session.findUniqueOrThrow` para obtener `userId`) dentro del propio `save()`, en vez de cambiar el contrato de `AnswerRepository` (que ya consumen `ValidateAnswerUseCase`/`EndSessionUseCase`/`GetUserStatisticsUseCase`, y cuyos tests no debían tocarse para esto).
+- **`toDbGeneratedBy`/`toDomainGeneratedBy`** en `PrismaExerciseRepository`: Prisma expone el nombre del enum (`AiBatch`/`Manual`), no el valor `@map` (`ai-batch`/`manual`) que usa el dominio — conversión explícita en ambas direcciones, ninguna prueba existente lo había ejercitado hasta estos tests de integración.
+
+`PrismaUserRepository.save` envuelve el upsert de `users` y el upsert de cada fila de `user_ratings` en una única `$transaction` (consistencia si falla a mitad).
+
+**`main.ts`**: sustituidos los 6 repositorios en memoria por sus equivalentes Prisma (construidos sobre un `PrismaClient` compartido, `createPrismaClient(DATABASE_URL)`); `InMemoryTemaRepository` se queda igual (fuera de alcance, ADR-013). Dos huecos detectados al conectar el seed existente a persistencia real (con `InMemory` no importaban, se perdían enteros al reiniciar):
+- El `Exercise` de seed usaba `crypto.randomUUID()` — con persistencia real, cada reinicio creaba un `Exercise` duplicado. Corregido con un id fijo (`00000000-0000-0000-0000-000000000001`), documentado en el propio archivo.
+- `void exercises.save(...)` (hallazgo ya documentado por Reviewer, `STATUS.md` #28) pasa a `await` — con una Map en memoria la promesa se resolvía en el mismo tick y el hallazgo era solo higiene de estilo; con una escritura real a red/DB, un `POST /sessions` que llegara antes de que el seed terminara habría fallado de verdad.
+
+**Migración real diferida**: `prisma migrate dev` falla en este entorno por un problema de Postgres ajeno al proyecto (discordancia de versión de collation en `template1`, típico tras una actualización de Windows) — confirmado con el usuario, se usó `prisma db push` para sincronizar el schema mientras tanto; las migraciones formales quedan pendientes de que se resuelva ese bug local.
+
+**Output generado**: `apps/backend-api/src/infrastructure/repositories/Prisma{User,Session,Exercise,Answer,Hint,UserCredentials}Repository.ts` (implementación completa), `apps/backend-api/src/infrastructure/persistence/prismaClient.ts` (factory con `@prisma/adapter-pg`), `apps/backend-api/src/presentation/main.ts` (wiring). Verificado: `npx turbo run typecheck lint test` → **31/31 en verde**, 79 tests `backend-api` (sin cambios, DB-free por diseño). `npm run test:integration` → **23/23 en verde** contra Postgres real. Smoke test manual end-to-end repetido con el servidor reiniciado entre medias: mismo usuario, mismo rating (804.29), misma estadística de tema tras el reinicio — la prueba concreta de que la persistencia funciona.
+
 **Output generado**: `apps/backend-api/src/presentation/http/errorMapping.ts` (nuevo) + `.test.ts` (4 tests), `apps/backend-api/src/presentation/http/routes.ts` (wiring actualizado), `apps/backend-api/src/application/use-cases/RegisterUseCase.ts` + `.test.ts` (1 test nuevo), `apps/backend-api/src/infrastructure/auth/JwtTokenIssuer.ts` + `.test.ts` (1 test nuevo). Verificado: `npx turbo run typecheck lint test` → **31/31 tareas en verde**, 79 tests en `backend-api` (antes 73).
