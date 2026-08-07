@@ -15,11 +15,14 @@ Origen: lista candidata de [STATUS.md](../STATUS.md) (pendiente #4).
 | [US-005](US-005-solicitar-pista.md) | Solicitar Pista | Usuario en sesión activa (Modo Resolución) | UC-003 Generate Hint |
 | [US-006](US-006-finalizar-sesion.md) | Finalizar Sesión | Usuario en sesión activa | UC-006 End Session |
 | [US-007](US-007-ver-estadisticas.md) | Ver Estadísticas | Usuario registrado | Sin UC asignado todavía — ver nota |
+| [US-008](US-008-subir-material-rag.md) | Consolidar Base de Conocimiento (RAG) | Administrador del sistema | Sin UC asignado todavía — ver nota |
 
 ## Nota de trazabilidad
 
 **US-002 vs. US-003**: no son la misma historia pese al nombre similar. US-002 es autenticación (`Login`). US-003 es arrancar una `Session` de entrenamiento (entidad de [ADR-004](../ADR/ADR-004_domain.md)) una vez ya autenticado — elegir modo, nivel y tema.
 
 **US-007 sin caso de uso**: los seis Casos de Uso listados en STATUS.md (UC-001 a UC-006) no cubren "ver estadísticas". Al definir Casos de Uso (pendiente #5), falta añadir un UC-007 (p. ej. `GetUserStatistics`) que sirva a esta historia.
+
+**US-008 sin caso de uso**: ningún Caso de Uso existente (UC-001 a UC-010) cubre la consolidación de material para RAG. El actor es el administrador del sistema (acceso directo al sistema de ficheros del servidor, no un rol de `User` — no depende de la aplicación ni de su autenticación). Queda explícito para cuando el Architecture Agent defina el Caso de Uso correspondiente, junto con la entidad de persistencia de fecha/estado por fichero (sin equivalente hoy en [ADR-004](../ADR/ADR-004_domain.md)).
 
 Registrado en `.ai/prompts/product.md`.

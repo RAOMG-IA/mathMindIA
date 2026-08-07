@@ -42,3 +42,43 @@ handoff:
 **Validación**: handoff completo (8/8 campos) — se procede a ejecutar.
 
 **Output generado**: `docs/ADR-002_Agentes.md` (adenda), `.ai/AGENTS.md` (sección "Handoff Obligatorio"), `.ai/skills/{director,orchestrator,knowledge-manager}.md` (responsabilidades actualizadas), esta entrada, `docs/STATUS.md` (#29).
+
+---
+
+## 2026-08-07 — Segundo handoff real: US-008 Consolidar Base de Conocimiento (RAG)
+
+**Input**: el usuario pidió una User Story para `ai-engine` que permita subir ficheros (bancos de problemas, notas, pistas) para consolidar RAG.
+
+```yaml
+handoff:
+  requester: "User"
+  objective: >
+    Historia de usuario para subir material de referencia (bancos de problemas, notas,
+    pistas) que consolide una base de conocimiento (RAG) sobre la que UC-001/UC-003
+    generen contenido, en vez de partir solo del conocimiento general del modelo.
+  scope: >
+    Un archivo docs/user-stories/US-008-*.md (formato Como/Quiero/Para + Gherkin,
+    ADR-002/product.md), indice de docs/user-stories/README.md actualizado. No incluye
+    diseno tecnico (tecnologia de indexado, formatos soportados) ni Caso de Uso nuevo.
+  constraints:
+    - "No crear arquitectura ni decidir tecnologia de RAG (restriccion de product.md)"
+    - "No asumir un actor/rol que no existe en el dominio (User no tiene rol, ADR-004) sin flaggearlo"
+  references:
+    - "ARCHITECTURE.md, seccion Estrategia IA (uso permitido: generar ejercicios/pistas/contenido)"
+    - "UC-001-generate-exercise-batch.md, UC-003-generate-hint.md (unicos puntos que construyen prompts hacia Qwen)"
+    - "ADR-012_linea_base_seguridad.md (riesgo de prompt injection ya senalado para UC-001/UC-003)"
+    - "US-007-ver-estadisticas.md (precedente de historia sin Caso de Uso asignado)"
+  acceptance:
+    - "Historia con Como/Quiero/Para + escenarios Gherkin, sin diseno tecnico"
+    - "Hueco de actor (gestor de contenido, sin modelar en el dominio) documentado explicitamente"
+    - "Riesgo de seguridad (tercera via de contenido no confiable hacia el prompt) senalado para Security Agent"
+  risks:
+    - "Que se trate como una historia mas de estudiante y se pierda el hueco de rol/permisos"
+  required_agents:
+    - "Product Agent (autoria de la historia)"
+    - "Knowledge Manager (verificar que no exista ya un actor o Caso de Uso equivalente)"
+```
+
+**Validación**: handoff completo (8/8 campos) — se procede a ejecutar. Knowledge Manager: confirmado que no existe RAG de producto (solo el RAG documental interno de `knowledge-manager.md`, sobre el propio repositorio) ni actor distinto de `User` en el dominio.
+
+**Output generado**: `docs/user-stories/US-008-subir-material-rag.md`, `docs/user-stories/README.md` (índice + nota de trazabilidad), `.ai/prompts/product.md`.
