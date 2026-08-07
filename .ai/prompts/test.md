@@ -72,3 +72,15 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 **Decisión tomada**: `QwenClient.test.ts` — 5 tests con `FakeChatModel` (devuelve strings canned): `generateHint`/`generateExercise` con salida válida (parseo correcto), salida con forma inválida (Zod lanza), salida no-JSON (`JSON.parse` lanza). Al escribir el adaptador se detectó un hueco real: el puerto `HintGenerator` (`GenerateHintUseCase.ts`) no llevaba `previousHints` pese a que UC-003 documenta pistas progresivas — se corrigió el puerto y `GenerateHintUseCase` (recopila pistas previas vía `HintRepository`), con 1 test nuevo (`GenerateHintUseCase.test.ts` pasa de 6 a 7 tests) y el `FakeHintGenerator` local actualizado. `QwenHintGenerator.test.ts` — 2 tests con un fake estructural de `QwenClient` (`Pick<QwenClient, 'generateHint'>`, sin LangChain real): mapeo correcto de `{exercise, order, previousHints}` a `GenerateHintInput`, propagación de errores.
 
 **Output generado**: `apps/ai-engine/src/llm/{ChatModel,QwenClient}.ts` (declare class QwenClient) + `QwenClient.test.ts` (5 tests); `apps/backend-api/src/infrastructure/ai/QwenHintGenerator.ts` (declare class) + `.test.ts` (2 tests); `GenerateHintUseCase.ts`/`.test.ts` actualizados. Verificado: `turbo typecheck` en verde; `vitest run` → **7/7 tests fallan por la razón correcta** (`QwenClient`/`QwenHintGenerator is not a constructor`) — Red confirmado.
+
+---
+
+## 2026-08-06 — Tests de GenerateExerciseBatchUseCase (UC-001, TDD Red)
+
+**Input**: "cerramos el uc1 y construimos el backend después" — último Caso de Uso pendiente, cierra el set completo (UC-001 a UC-008) antes de abordar los Controllers/rutas reales.
+
+**Contexto utilizado**: `docs/use-cases/UC-001-generate-exercise-batch.md` (flujo principal, flujo alternativo 4a "reintenta, máximo N intentos"), `QwenClient.generateExercise` (ya implementado y testeado), `Tema`/`TemaRepository` (ADR-006, `academicLevels`/`difficultyRange` ya materializados), invariante de `Exercise` (ADR-004: `type='Test'` ⇒ exactamente 3 opciones y `correctAnswer` incluida).
+
+**Decisión tomada**: 5 tests con un `QueuedExerciseGenerator` fake (`Pick<QwenClient, 'generateExercise'>`, respuestas encoladas para simular reintentos): genera y persiste tipo Resolution válido, genera y persiste tipo Test válido, reintenta cuando el primer intento viola la invariante y el segundo es válido (flujo 4a), lanza tras agotar los intentos si ninguno es válido (verificando además que no se persiste nada), lanza si el Tema no aplica al `AcademicLevel` pedido (precondición). Paso 1 del UC (seleccionar Tema con escasez) queda explícitamente fuera — llega como input ya resuelto.
+
+**Output generado**: `apps/ai-engine/src/batch/GenerateExerciseBatchUseCase.ts` (declare class) + `.test.ts` (5 tests). Verificado: `turbo typecheck` en verde; `vitest run` → **5/5 tests fallan con `TypeError: GenerateExerciseBatchUseCase is not a constructor`** — Red confirmado por la razón correcta.
