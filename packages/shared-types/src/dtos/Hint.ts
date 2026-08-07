@@ -1,7 +1,11 @@
 // UC-003 Generate Hint (US-005).
+// elapsedMs: tiempo transcurrido desde que se mostro el ejercicio, en ms -- lo necesita
+// GenerateHintUseCase para verificar la precondicion "el tiempo limite expiro" (hueco
+// detectado al mapear rutas: faltaba en este DTO pese a ser input obligatorio del Caso de Uso).
 export interface RequestHintRequestDto {
   readonly sessionId: string
   readonly exerciseId: string
+  readonly elapsedMs: number
 }
 
 // Nota de diseno pendiente de resolver en infraestructura: hintsUsed vive en Answer

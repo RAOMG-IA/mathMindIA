@@ -372,6 +372,28 @@ Redis Cache
 
 ---
 
+# API REST (Rutas)
+
+Mapeo de rutas HTTP a los Controllers ya existentes (`apps/backend-api/src/presentation/http`, `declare class` sin cuerpo) y a los DTOs de `packages/shared-types/src/dtos`. Una ruta por DTO — sin anidar recursos en la URL cuando el DTO ya lleva el identificador en el body, para no duplicar el dato en dos sitios.
+
+| Método | Ruta | Auth | Controller.método | DTO petición → respuesta | Caso de Uso |
+|---|---|---|---|---|---|
+| POST | `/auth/register` | No | `AuthController.register` | `RegisterRequestDto` → `RegisterResponseDto` | US-001 |
+| POST | `/auth/login` | No | `AuthController.login` | `LoginRequestDto` → `LoginResponseDto` | US-002 |
+| POST | `/sessions` | Sí | `SessionController.startSession(userId, body)` | `StartSessionRequestDto` → `StartSessionResponseDto` | UC-005 |
+| POST | `/sessions/end` | Sí | `SessionController.endSession` | `EndSessionRequestDto` → `EndSessionResponseDto` | UC-006 |
+| POST | `/answers` | Sí | `AnswerController.submitAnswer` | `SubmitAnswerRequestDto` → `SubmitAnswerResponseDto` | UC-002 (compone UC-008 en la misma respuesta) |
+| POST | `/hints` | Sí | `HintController.requestHint` | `RequestHintRequestDto` → `RequestHintResponseDto` | UC-003 |
+| GET | `/users/me/statistics` | Sí | `StatisticsController.getStatistics(userId)` | — → `GetUserStatisticsResponseDto` | UC-007 |
+
+**Auth**: header `Authorization: Bearer <sessionToken>` (el `sessionToken` opaco ya devuelto por `register`/`login`). Un middleware lo resuelve a `userId` y lo inyecta en el `Controller` (mismo patrón que `StatisticsController.getStatistics(userId)`, nunca tomado del body — evita que un cliente suplante a otro usuario). El mecanismo interno del token (JWT vs sesión de servidor) sigue sin decidir — ver [US-002](../../docs/user-stories/US-002-login.md), "Fuera de alcance" — esta tabla solo fija el transporte (`Bearer`), no la verificación.
+
+**Huecos detectados y corregidos al mapear**: `RequestHintRequestDto` no llevaba `elapsedMs` pese a ser input obligatorio de `GenerateHintUseCase` (verificación de tiempo expirado) — añadido. `SessionController.startSession` no tenía forma de recibir `userId` — añadido como parámetro separado del body, igual que `StatisticsController`.
+
+**Hueco pendiente, sin resolver aquí (fuera de las restricciones de esta skill — no implementar código)**: `EndSessionUseCase`, `ValidateAnswerUseCase` y `GenerateHintUseCase` reciben `sessionId` pero ninguno verifica que la `Session` pertenezca al `userId` autenticado — un usuario podría finalizar/responder/pedir pistas sobre la sesión de otro si adivina o filtra su `sessionId` (IDOR). Antes de implementar los Controllers reales, el Developer Agent debe añadir esa verificación de autorización (comparar `session.userId` contra el `userId` del token) con sus tests correspondientes.
+
+---
+
 # Reglas para Agentes IA
 
 Todo agente de desarrollo debe seguir estas reglas:

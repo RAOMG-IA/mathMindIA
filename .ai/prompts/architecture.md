@@ -218,4 +218,16 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 
 **Output generado**: `docs/ADR-001_LenguajesMetodologias.md` (adenda 2026-08-06, sección Motor IA + Zod añadido a la lista de stack).
 
+---
+
+## 2026-08-06 — API REST: mapeo de rutas a Controllers
+
+**Input**: El usuario pidió pedirle al Product Agent una User Story para que el backend "genere los endpoints" que el front necesita. Se señaló un desajuste con la metodología propia del proyecto: `docs/user-stories/README.md` dice explícitamente que las User Stories "no incluyen diseño técnico ni de arquitectura — eso es responsabilidad del Architecture Agent", y `.ai/skills/product.md` tiene como restricción "No crear arquitectura". Confirmado con el usuario vía AskUserQuestion: el Architecture Agent define el mapa de rutas, no una User Story nueva.
+
+**Contexto utilizado**: los 5 Controllers ya existentes (`apps/backend-api/src/presentation/http/*.ts`, `declare class` sin cuerpo) y los DTOs de `packages/shared-types/src/dtos` (ya fijados en la fase de contratos de frontera), `ARCHITECTURE.md` (sección Presentation ya lista "REST Controllers/Routes/Middlewares" como ejemplos, sin mapa concreto).
+
+**Decisión tomada**: una ruta por DTO, sin anidar recursos en la URL cuando el DTO ya lleva el identificador en el body (evita duplicar el dato). Auth vía `Authorization: Bearer <sessionToken>`, resuelto por middleware a `userId` inyectado en el Controller — nunca tomado del body. Dos huecos de contrato detectados y corregidos al mapear: `RequestHintRequestDto` no llevaba `elapsedMs` (input obligatorio de `GenerateHintUseCase`); `SessionController.startSession` no tenía forma de recibir `userId`. Un hueco de autorización detectado y **documentado pero no corregido** (fuera de la restricción "no implementar" de esta skill): `EndSessionUseCase`/`ValidateAnswerUseCase`/`GenerateHintUseCase` no verifican que la `Session` pertenezca al usuario autenticado (riesgo IDOR) — queda como requisito explícito para el Developer Agent antes de implementar los Controllers reales.
+
+**Output generado**: `ARCHITECTURE.md` (nueva sección "API REST (Rutas)"), `packages/shared-types/src/dtos/Hint.ts` (`elapsedMs` añadido), `apps/backend-api/src/presentation/http/SessionController.ts` (`userId` añadido a `startSession`). Verificado: `npx turbo run typecheck lint` → 23/23 en verde (solo cambios de contrato/tipos, sin lógica).
+
 **Output generado**: [docs/ADR/ADR-006_math_topics.md](../../docs/ADR/ADR-006_math_topics.md). Actualizados: `ADR-004_domain.md` (`Exercise.topic` tipado como `TemaCode`, ya no placeholder) y `STATUS.md` (pendiente #3 completado, Dominio al 100%).
