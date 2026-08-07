@@ -28,6 +28,7 @@ Funciona como una capa de RAG documental interno del proyecto.
 - Generar resúmenes ejecutivos.
 - Identificar contradicciones.
 - Mantener consistencia global.
+- Poblar/verificar el campo `references` del handoff (ADRs, casos de uso, historias de usuario relacionados) antes de que el Orchestrator lo valide y despache ([ADR-002](../../docs/ADR-002_Agentes.md), adenda "Contrato de Handoff obligatorio").
 
 ---
 

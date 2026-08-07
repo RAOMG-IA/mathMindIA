@@ -110,6 +110,16 @@ Ninguna fase puede omitirse.
 
 ---
 
+# Handoff Obligatorio
+
+Toda tarea que no sea un fix trivial de una línea debe pasar por un handoff estructurado (8 campos obligatorios: `requester`, `objective`, `scope`, `constraints`, `references`, `acceptance`, `risks`, `required_agents`) antes de empezar a ejecutarse. El Orchestrator (o el Director si el Orchestrator no interviene) valida que esté completo — si falta un campo, la tarea se devuelve al emisor en vez de avanzar.
+
+`required_agents` por defecto es la lista completa del Flujo Obligatorio de arriba; omitir alguno exige justificación explícita en el propio handoff.
+
+Detalle completo, plantilla y ejemplo: [ADR-002](../docs/ADR-002_Agentes.md), adenda 2026-08-07.
+
+---
+
 # Flujo Multiagente
 
 ```mermaid

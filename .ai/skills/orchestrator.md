@@ -26,6 +26,7 @@ Su función es orquestar.
 - Evitar trabajo duplicado.
 - Resolver conflictos entre agentes.
 - Garantizar cumplimiento del flujo oficial.
+- Validar que el handoff recibido tenga los 8 campos obligatorios (`requester`, `objective`, `scope`, `constraints`, `references`, `acceptance`, `risks`, `required_agents`) antes de despachar a agentes operativos — si falta alguno, devolver la tarea al emisor en vez de avanzar ([ADR-002](../../docs/ADR-002_Agentes.md), adenda "Contrato de Handoff obligatorio").
 
 ---
 
@@ -147,6 +148,7 @@ Debe impedir:
 - Ejecutar Developer sin Test.
 - Ignorar Architecture.
 - Ignorar ADRs.
+- Dar una tarea por cerrada si `required_agents` del handoff no se cumplió — sin justificación explícita registrada, no es una omisión válida.
 
 ---
 

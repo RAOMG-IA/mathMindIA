@@ -14,6 +14,7 @@ Actuar como interfaz principal entre el usuario y el sistema multiagente.
 - Optimizar prompts.
 - Reducir costes de contexto.
 - Mantener requisitos funcionales.
+- Producir el handoff inicial (`objective`, `scope`, `constraints`, `references` de partida) a partir de la solicitud del usuario, para que el Orchestrator lo complete y valide ([ADR-002](../../docs/ADR-002_Agentes.md), adenda "Contrato de Handoff obligatorio").
 
 ---
 
