@@ -1,15 +1,21 @@
 // Ver docs/ADR/ADR-013_modelo_datos_fisico.md (adenda: UserCredentials, Session.topic/
-// ratingAtStart, Exercise.timeLimitMs).
+// ratingAtStart, Exercise.timeLimitMs) y docs/ADR/ADR-014_rag.md (RagIngestionRecord,
+// RagChunk, extension pgvector).
 // Declarativo -- sin logica ejecutable, no viola la TDD Enforcement Rule (ADR-003).
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 // Prisma 7: la connection URL ya no vive aqui, se mueve a prisma.config.ts
 // (ver apps/backend-api/prisma.config.ts). https://pris.ly/d/config-datasource
+// extensions = [vector]: pgvector (ADR-014) -- almacen vectorial de RagChunk.embedding,
+// en vez de un servicio de base vectorial aparte (Chroma exigiria un servidor HTTP propio,
+// sin modo embebido en Node).
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector]
 }
 
 enum AcademicLevel {
@@ -152,4 +158,41 @@ model Hint {
   // HintRepository.findByExerciseIdAndOrder (UC-003) -- unico por (exercise, order).
   @@unique([exerciseId, hintOrder])
   @@map("hints")
+}
+
+enum RagIngestionStatus {
+  Processed @map("processed")
+  Error     @map("error")
+}
+
+// Un registro por fichero procesado por UC-011 (docs/ADR/ADR-014_rag.md). Sin FK a Tema ni
+// a Exercise a proposito -- la asociacion fichero->Tema no se hace en la ingesta, ocurre por
+// similitud semantica al generar (ver UC-001/UC-003).
+model RagIngestionRecord {
+  id           String             @id @default(uuid())
+  fileName     String             @map("file_name")
+  status       RagIngestionStatus
+  errorMessage String?            @map("error_message")
+  chunkCount   Int                @default(0) @map("chunk_count")
+  processedAt  DateTime           @default(now()) @map("processed_at")
+
+  chunks RagChunk[]
+
+  @@map("rag_ingestion_records")
+}
+
+// Un chunk embebido por fila. `embedding` es pgvector -- Prisma no tiene tipo nativo para
+// `vector(n)`, se declara Unsupported (invisible al Client generado); la escritura y la
+// busqueda por similitud se hacen con SQL crudo ($executeRaw/$queryRaw), ver ADR-014.
+// 384 = dimension del modelo de embeddings local (Xenova/all-MiniLM-L6-v2, ADR-014).
+model RagChunk {
+  id                 String                  @id @default(uuid())
+  ingestionRecordId  String                  @map("ingestion_record_id")
+  chunkIndex         Int                     @map("chunk_index")
+  content            String
+  embedding          Unsupported("vector(384)")
+
+  ingestionRecord RagIngestionRecord @relation(fields: [ingestionRecordId], references: [id])
+
+  @@map("rag_chunks")
 }

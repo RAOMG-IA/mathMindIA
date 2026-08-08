@@ -343,6 +343,32 @@ Uso NO recomendado:
 
 ---
 
+# RAG (Base de Conocimiento)
+
+Ver [ADR-014](docs/ADR/ADR-014_rag.md), [UC-011](docs/use-cases/UC-011-ingest-knowledge-base.md). Diseñado para que un administrador del sistema aporte ejercicios, notas y recomendaciones de referencia, de forma que las respuestas del agente (ejercicios y pistas generados) queden más ajustadas a ese criterio. Deposita los ficheros en un directorio local; un script (manual o cron) los ingiere en `ai-engine`:
+
+```text
+Directorio de entrada
+      │
+      ▼
+Split en chunks (LangChain)
+      │
+      ▼
+Embeddings locales (Xenova/transformers, sin red)
+      │
+      ▼
+PostgreSQL + pgvector ── registro de ingesta (Postgres)
+      │
+      ▼
+Directorio de histórico
+```
+
+`UC-001` (Generate Exercise, Batch) y `UC-003` (Generate Hint) recuperan chunks relevantes por similitud semántica (query construida desde `Tema`/`Exercise`, no desde metadata del fichero — no hay tagging fichero↔Tema en la ingesta) y los añaden al prompt antes de invocar a Qwen. Sin material consolidado, generan igual que hoy — el retrieval es aditivo, nunca bloqueante.
+
+**pgvector, no un almacén vectorial dedicado** (p.ej. Chroma): reutiliza el mismo PostgreSQL ya usado por el resto de la aplicación, sin levantar un servicio nuevo — coherente con el resto de esta arquitectura (mono-servidor, sin Docker).
+
+---
+
 # Cache Strategy
 
 Objetivo:

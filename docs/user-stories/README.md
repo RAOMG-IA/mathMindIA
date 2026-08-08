@@ -15,7 +15,7 @@ Origen: lista candidata de [STATUS.md](../STATUS.md) (pendiente #4).
 | [US-005](US-005-solicitar-pista.md) | Solicitar Pista | Usuario en sesión activa (Modo Resolución) | UC-003 Generate Hint |
 | [US-006](US-006-finalizar-sesion.md) | Finalizar Sesión | Usuario en sesión activa | UC-006 End Session |
 | [US-007](US-007-ver-estadisticas.md) | Ver Estadísticas | Usuario registrado | Sin UC asignado todavía — ver nota |
-| [US-008](US-008-subir-material-rag.md) | Consolidar Base de Conocimiento (RAG) | Administrador del sistema | Sin UC asignado todavía — ver nota |
+| [US-008](US-008-subir-material-rag.md) | Consolidar Base de Conocimiento (RAG) | Administrador del sistema | [UC-011](../use-cases/UC-011-ingest-knowledge-base.md) Ingest Knowledge Base |
 
 ## Nota de trazabilidad
 
@@ -23,6 +23,6 @@ Origen: lista candidata de [STATUS.md](../STATUS.md) (pendiente #4).
 
 **US-007 sin caso de uso**: los seis Casos de Uso listados en STATUS.md (UC-001 a UC-006) no cubren "ver estadísticas". Al definir Casos de Uso (pendiente #5), falta añadir un UC-007 (p. ej. `GetUserStatistics`) que sirva a esta historia.
 
-**US-008 sin caso de uso**: ningún Caso de Uso existente (UC-001 a UC-010) cubre la consolidación de material para RAG. El actor es el administrador del sistema (acceso directo al sistema de ficheros del servidor, no un rol de `User` — no depende de la aplicación ni de su autenticación). Queda explícito para cuando el Architecture Agent defina el Caso de Uso correspondiente, junto con la entidad de persistencia de fecha/estado por fichero (sin equivalente hoy en [ADR-004](../ADR/ADR-004_domain.md)).
+**US-008 → UC-011**: [UC-011](../use-cases/UC-011-ingest-knowledge-base.md) (Ingest Knowledge Base) cierra el hueco, definido en [ADR-014](../ADR/ADR-014_rag.md) junto con las decisiones que esta historia dejaba en "Fuera de alcance" (asociación fichero↔Tema, tecnología de indexado vectorial, persistencia del registro de ingesta).
 
 Registrado en `.ai/prompts/product.md`.

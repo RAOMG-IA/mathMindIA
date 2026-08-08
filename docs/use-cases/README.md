@@ -18,6 +18,7 @@ Los nombres de clase (`XxxUseCase`) siguen los ejemplos ya fijados en [ARCHITECT
 | [UC-008](UC-008-select-next-exercise.md) | Select Next Exercise | Usuario (vía backend-api) | US-003, US-004 |
 | [UC-009](UC-009-register.md) | Register | Visitante | US-001 |
 | [UC-010](UC-010-login.md) | Login | Usuario registrado | US-002 |
+| [UC-011](UC-011-ingest-knowledge-base.md) | Ingest Knowledge Base (RAG) | Sistema (script de ingesta) | US-008 |
 
 ## Notas de trazabilidad / desviaciones respecto a STATUS.md
 
@@ -25,5 +26,6 @@ Los nombres de clase (`XxxUseCase`) siguen los ejemplos ya fijados en [ARCHITECT
 - **UC-007 Get User Statistics es nuevo**: no existía en la lista original; cierra el hueco detectado al escribir [US-007](../user-stories/US-007-ver-estadisticas.md), que no tenía caso de uso asignado.
 - **UC-004 no repite las fórmulas**: su diseño algorítmico detallado (Expected score, factor K, actualización de ratings) ya está en [ADR-005](../ADR/ADR-005-adaptive-difficulty-engine.md); este documento solo da la especificación de caso de uso estándar y enlaza a ADR-005 como fuente autoritativa.
 - **UC-009/UC-010 son nuevos**: mismo motivo que UC-007 — [US-001](../user-stories/US-001-registro.md) y [US-002](../user-stories/US-002-login.md) nunca tuvieron Caso de Uso asignado, hueco detectado al empezar a construir los Controllers reales (`AuthController` no podía implementarse sin este diseño previo, TDD Enforcement Rule).
+- **UC-011 es nuevo**: cierra el hueco de [US-008](../user-stories/US-008-subir-material-rag.md) ("sin caso de uso"), ver [ADR-014](../ADR/ADR-014_rag.md). No es un actor de aplicación (`User`) — es un script, mismo criterio de "Sistema" que UC-001. UC-001 y UC-003 se amendaron con un paso de recuperación de contexto (retrieval) sobre lo que UC-011 consolida, sin convertirse en Casos de Uso nuevos: el retrieval no tiene actor/trigger propio, es un paso interno de sus flujos ya existentes.
 
 Registrado en `.ai/prompts/architecture.md`.
