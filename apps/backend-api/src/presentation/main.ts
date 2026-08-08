@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
 import { InMemoryHintUsageTracker, InMemoryTemaRepository } from '@mathmind/shared-testing'
-import { LangChainQwenModel, QwenClient } from '@mathmind/ai-engine'
+import { LangChainChatModel, QwenClient } from '@mathmind/ai-engine'
 import type { ExerciseId } from '@mathmind/shared-domain'
 import { createRoutes } from './http/routes.js'
 import { AuthController } from './http/AuthController.js'
@@ -45,8 +45,13 @@ if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is required (see .env.example)')
 }
 
-const QWEN_API_KEY = process.env.QWEN_API_KEY
-const QWEN_BASE_URL = process.env.QWEN_BASE_URL
+// Nombres de variable deliberadamente genericos (no "QWEN_*") -- LangChainChatModel envuelve
+// ChatOpenAI (LangChain) contra cualquier endpoint compatible con la API de OpenAI, verificado
+// en la practica con mas de un proveedor. AI_MODEL_NAME es opcional -- sin valor, se usa el
+// default del constructor ('qwen-plus', historico, ver LangChainChatModel.ts).
+const AI_API_KEY = process.env.AI_API_KEY
+const AI_BASE_URL = process.env.AI_BASE_URL
+const AI_MODEL_NAME = process.env.AI_MODEL_NAME
 
 const prisma = createPrismaClient(DATABASE_URL)
 const users = new PrismaUserRepository(prisma)
@@ -100,12 +105,18 @@ const tokenIssuer = new JwtTokenIssuer(JWT_SECRET)
 // hoy -- comportamiento aditivo, no bloqueante (US-008).
 const knowledgeBase = new PostgresKnowledgeBaseIndex(prisma, new XenovaEmbedder())
 
-const hintGenerator =
-  QWEN_API_KEY && QWEN_BASE_URL
-    ? new QwenHintGenerator(new QwenClient(new LangChainQwenModel(QWEN_API_KEY, QWEN_BASE_URL)), knowledgeBase)
+const chatModel =
+  AI_API_KEY && AI_BASE_URL
+    ? AI_MODEL_NAME
+      ? new LangChainChatModel(AI_API_KEY, AI_BASE_URL, AI_MODEL_NAME)
+      : new LangChainChatModel(AI_API_KEY, AI_BASE_URL)
     : undefined
+
+const hintGenerator = chatModel
+  ? new QwenHintGenerator(new QwenClient(chatModel), knowledgeBase)
+  : undefined
 if (!hintGenerator) {
-  console.warn('QWEN_API_KEY/QWEN_BASE_URL not set -- POST /hints will fail until configured.')
+  console.warn('AI_API_KEY/AI_BASE_URL not set -- POST /hints will fail until configured.')
 }
 
 const updateDifficultyUseCase = new UpdateDifficultyUseCase(exercises)
@@ -142,7 +153,7 @@ const controllers = {
       hintUsage,
       hintGenerator ?? {
         generate: () => {
-          throw new Error('HintGenerator not configured (missing QWEN_API_KEY/QWEN_BASE_URL)')
+          throw new Error('HintGenerator not configured (missing AI_API_KEY/AI_BASE_URL)')
         },
       },
       idGenerator,

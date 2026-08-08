@@ -1,6 +1,6 @@
 // Trazabilidad: ADR-012 (docs/ADR/ADR-012_linea_base_seguridad.md, "hash con algoritmo
 // estandar bcrypt o argon2"). Sin fakes: bcrypt es computo puro, se testea con la libreria
-// real (a diferencia de LangChainQwenModel/Prisma*, que dependen de red/DB).
+// real (a diferencia de LangChainChatModel/Prisma*, que dependen de red/DB).
 //
 // TDD Red: BcryptPasswordHasher todavia no tiene implementacion (declare class, sin cuerpo).
 // Se espera que este archivo FALLE al ejecutarse hasta que el Developer Agent la implemente.

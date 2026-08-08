@@ -12,7 +12,7 @@ import type { TokenIssuer } from '@mathmind/shared-domain'
 
 // Mapeo de rutas -> Controllers, ver ARCHITECTURE.md ("API REST (Rutas)"). Wiring puro (sin
 // logica propia mas alla de traducir Request/Response <-> DTO/userId) -- igual que
-// LangChainQwenModel/Prisma*, queda sin tests automaticos (necesitaria un servidor HTTP real o
+// LangChainChatModel/Prisma*, queda sin tests automaticos (necesitaria un servidor HTTP real o
 // supertest, no incorporado en este alcance); se verifica arrancando el servidor y probando
 // los endpoints manualmente. El mapeo de errores en si (mensaje generico vs real) SI esta
 // testeado, ver errorMapping.ts/.test.ts (hallazgo Security 2026-08-07).

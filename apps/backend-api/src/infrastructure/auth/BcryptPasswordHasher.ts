@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt'
 import type { PasswordHasher } from '@mathmind/shared-domain'
 
 // Implementacion real del puerto PasswordHasher (ADR-012: "hash con algoritmo estandar bcrypt
-// o argon2"). A diferencia de LangChainQwenModel/Prisma*, bcrypt es computo puro (sin red ni
+// o argon2"). A diferencia de LangChainChatModel/Prisma*, bcrypt es computo puro (sin red ni
 // DB) -- se testea de verdad, no queda como gap aceptado.
 const SALT_ROUNDS = 12
 

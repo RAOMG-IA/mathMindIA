@@ -14,14 +14,14 @@ Este ADR los sustituye por una línea base proporcionada al estado real del proy
 
 - **Prompt injection real**: [UC-001](../use-cases/UC-001-generate-exercise-batch.md) (Generate Exercise, Batch) y [UC-003](../use-cases/UC-003-generate-hint.md) (Generate Hint) son los únicos dos puntos donde el sistema construye prompts hacia Qwen. Ninguno de los ADR-SEC originales mencionaba esto — se centraban en RAG interno entre agentes de desarrollo, no en el flujo del producto.
 - **Datos de menores**: `AcademicLevel.Primaria` ([ADR-004](ADR-004_domain.md)) implica usuarios potencialmente menores de 14 años. Ningún ADR-SEC original lo mencionaba.
-- **Secretos ya existentes**: `apps/ai-engine/.env.example` (`QWEN_API_KEY`) y `apps/backend-api/.env.example` (`DATABASE_URL`, `REDIS_URL`) ya están scaffoldeados y cubiertos por `.gitignore`.
+- **Secretos ya existentes**: `apps/backend-api/.env.example` (`AI_API_KEY`, `DATABASE_URL`, `REDIS_URL`) ya están scaffoldeados y cubiertos por `.gitignore`.
 - **Autenticación pendiente**: [US-001](../user-stories/US-001-registro.md) y [US-002](../user-stories/US-002-login.md) todavía no están implementadas, pero ya definen el comportamiento esperado (mensajes de error genéricos, etc.) — esta baseline fija la regla de manejo de contraseñas antes de que se implementen.
 
 ## Decisión
 
 ### 1. Gestión de secretos (aplicable ya)
 
-- Todo secreto (`QWEN_API_KEY`, `DATABASE_URL`, `REDIS_URL`, futuras claves de firma JWT) vive únicamente en variables de entorno — nunca en código, ADRs, documentación o registros de trazabilidad.
+- Todo secreto (`AI_API_KEY`, `DATABASE_URL`, `REDIS_URL`, futuras claves de firma JWT) vive únicamente en variables de entorno — nunca en código, ADRs, documentación o registros de trazabilidad.
 - Prohibido loguear valores de variables de entorno.
 - Los agentes de desarrollo (Product, Architecture, Test, Developer, Reviewer, Documentation) trabajan solo sobre `.env.example` (plantillas sin valores). Solo Security y DevOps gestionan archivos `.env` reales.
 - Cuando exista CI/CD (DevOps Agent, pendiente), los secretos se inyectan como variables de entorno del pipeline, nunca como archivo versionado.
@@ -49,7 +49,7 @@ Este ADR los sustituye por una línea base proporcionada al estado real del proy
 
 Esta es la regla que respalda la "Línea base de seguridad" de `AGENTS.md`, distinta de las obligaciones propias del Security Agent:
 
-- Ningún agente de desarrollo incluye valores de secretos reales en su registro de trazabilidad (`.ai/prompts/<agent>.md`) ni en ningún ADR — solo nombres de variable (p. ej. `QWEN_API_KEY`), nunca valores.
+- Ningún agente de desarrollo incluye valores de secretos reales en su registro de trazabilidad (`.ai/prompts/<agent>.md`) ni en ningún ADR — solo nombres de variable (p. ej. `AI_API_KEY`), nunca valores.
 - Solo Security Agent y DevOps Agent gestionan y rotan secretos reales.
 
 ## Consecuencias

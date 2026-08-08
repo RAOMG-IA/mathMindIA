@@ -25,7 +25,7 @@ Esto resuelve el hueco de "Fuera de alcance" de US-008 sin necesidad de metadata
 
 ### Embeddings: modelo local, sin API externa
 
-`@langchain/community` + `@xenova/transformers`, modelo tipo `Xenova/all-MiniLM-L6-v2` (384 dimensiones), ejecutado en el propio proceso de Node. No depende de red, no consume cuota de `QWEN_API_KEY`. Judgment call: el nombre exacto del modelo se confirma al implementar (mismo criterio que otras constantes documentadas como judgment call en la sesión, p.ej. `MAX_ATTEMPTS` de UC-001).
+`@langchain/community` + `@xenova/transformers`, modelo tipo `Xenova/all-MiniLM-L6-v2` (384 dimensiones), ejecutado en el propio proceso de Node. No depende de red, no consume cuota de `AI_API_KEY`. Judgment call: el nombre exacto del modelo se confirma al implementar (mismo criterio que otras constantes documentadas como judgment call en la sesión, p.ej. `MAX_ATTEMPTS` de UC-001).
 
 ### Almacén vectorial: pgvector, no Chroma
 
@@ -66,7 +66,7 @@ Nuevo [UC-011](../use-cases/UC-011-ingest-knowledge-base.md), mismo patrón que 
 
 ### Retrieval conectado a UC-001/UC-003
 
-`GenerateExerciseInput`/`GenerateHintInput` (`apps/ai-engine/src/prompts`) ganan un campo opcional `context?: readonly string[]`, interpolado por `buildGenerateExercisePrompt`/`buildGenerateHintPrompt` cuando está presente, sin romper el contrato de salida JSON-only ya establecido (ADR-001, adenda Zod). `ChatModel`/`LangChainQwenModel` no cambian — siguen recibiendo un único `string` como hoy.
+`GenerateExerciseInput`/`GenerateHintInput` (`apps/ai-engine/src/prompts`) ganan un campo opcional `context?: readonly string[]`, interpolado por `buildGenerateExercisePrompt`/`buildGenerateHintPrompt` cuando está presente, sin romper el contrato de salida JSON-only ya establecido (ADR-001, adenda Zod). `ChatModel`/`LangChainChatModel` no cambian — siguen recibiendo un único `string` como hoy.
 
 `GenerateExerciseBatchUseCase` y `QwenHintGenerator` reciben `KnowledgeBaseIndex` inyectado, construyen la query de recuperación (ver "Sin tagging" arriba), llaman `search()` y pasan el resultado como `context`. Si no hay resultados (`Tema` sin material consolidado), `context` se omite — el ejercicio/pista se genera igual que hoy, sin caso especial ni fallo (cubre el AC "Tema sin material consolidado sigue funcionando" de US-008 de forma natural).
 
