@@ -3,6 +3,20 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 
 ---
 
+## 2026-08-08 — ADR-015 Arquitectura de pantallas de `mobile-app`
+
+**Input**: El usuario pidió planificar Casos de Uso/User Stories para generar `mobile-app`.
+
+**Contexto utilizado**: scaffolding real de `apps/mobile-app` (`app/_layout.tsx`, `app/index.tsx` placeholder, 5 README bajo `src/` en estado "Pendiente de implementar"); `docs/ADR-001_LenguajesMetodologias.md` (Zustand/TanStack Query/Expo Router ya ratificados, no decisiones nuevas); `ARCHITECTURE.md` (responsabilidades de `mobile-app`: UX/navegación/estado/consumo API, explícitamente sin lógica de negocio); las 8 User Stories (`docs/user-stories/`); `apps/backend-api/openapi.yaml` (contrato de las 8 rutas reales, ya cierra el bloqueo que `src/api/README.md` señalaba).
+
+**Decisión tomada**: mapeo de las 7 User Stories relevantes (US-001 a US-007; US-008 excluida, es flujo de administrador sin pantalla) a rutas de Expo Router con route groups `(auth)`/`(app)` y guard de autenticación centralizado; US-004/US-005/US-006(acción) comparten una única pantalla (`session/[sessionId]`), reflejando que las tres ocurren "en una sesión de entrenamiento activa"; patrón de `src/api/` como un hook de TanStack Query por ruta de `openapi.yaml`; formalización (no nueva decisión) del reparto TanStack Query (estado de servidor) / Zustand (estado de cliente, incluido el `sessionToken` en memoria).
+
+**Revisión posterior, misma tarea**: el usuario aportó dos notas tras la primera versión. (1) despliegue en Android + iOS + Web (una sola base de código vía `react-native-web`) — invalida `expo-secure-store` a secas (no existe en navegador); corregido con `TokenStorage`, abstracción seleccionada por `Platform.OS` (`expo-secure-store` nativo / `localStorage` web), con el riesgo de seguridad más débil de `localStorage` (sin cifrado de SO, XSS) documentado como no mitigado en v1. (2) header/configuración global con el modo y nivel informados — resuelto con una cabecera común a `(app)` (email cacheado en Zustand desde el propio formulario de login/registro, ya que `LoginResponseDto`/`RegisterResponseDto` no lo devuelven; nivel/rating reutilizando el hook de TanStack Query ya necesario para `GET /users/me/statistics`, sin endpoint nuevo) más accesos directos a Estadísticas y Home — el formulario real de cambio de modo/nivel/tema sigue siendo únicamente el de `(app)/home` (US-003), el header no lo duplica.
+
+**Output generado**: [docs/ADR/ADR-015_mobile_app_screens.md](../../docs/ADR/ADR-015_mobile_app_screens.md). READMEs de `apps/mobile-app/src/{screens,navigation,api,store}` actualizados para referenciarlo. `docs/user-stories/README.md` gana columna "Pantalla `mobile-app`" en el índice. `docs/STATUS.md` #34.
+
+---
+
 ## 2026-08-05 — ADR-005 Adaptive Difficulty Engine
 
 **Input**: Solicitud de diseñar ADR-005 (pendiente prioritario #2 en ADR-000_Estructura.md), con inputs/output ya fijados (Accuracy, Response Time, Current Streak, Previous Difficulty → Next Difficulty).
