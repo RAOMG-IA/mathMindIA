@@ -8,3 +8,4 @@ export type ExerciseId = Brand<string, 'ExerciseId'>
 export type SessionId = Brand<string, 'SessionId'>
 export type AnswerId = Brand<string, 'AnswerId'>
 export type HintId = Brand<string, 'HintId'>
+export type RagIngestionRecordId = Brand<string, 'RagIngestionRecordId'>

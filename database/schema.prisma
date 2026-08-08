@@ -167,7 +167,8 @@ enum RagIngestionStatus {
 
 // Un registro por fichero procesado por UC-011 (docs/ADR/ADR-014_rag.md). Sin FK a Tema ni
 // a Exercise a proposito -- la asociacion fichero->Tema no se hace en la ingesta, ocurre por
-// similitud semantica al generar (ver UC-001/UC-003).
+// similitud semantica al generar (ver UC-001/UC-003). Tampoco hay FK a RagChunk (ver nota ahi
+// abajo) -- se relacionan por `fileName`/`sourceFileName`, sin relacion formal en el schema.
 model RagIngestionRecord {
   id           String             @id @default(uuid())
   fileName     String             @map("file_name")
@@ -176,8 +177,6 @@ model RagIngestionRecord {
   chunkCount   Int                @default(0) @map("chunk_count")
   processedAt  DateTime           @default(now()) @map("processed_at")
 
-  chunks RagChunk[]
-
   @@map("rag_ingestion_records")
 }
 
@@ -185,14 +184,18 @@ model RagIngestionRecord {
 // `vector(n)`, se declara Unsupported (invisible al Client generado); la escritura y la
 // busqueda por similitud se hacen con SQL crudo ($executeRaw/$queryRaw), ver ADR-014.
 // 384 = dimension del modelo de embeddings local (Xenova/all-MiniLM-L6-v2, ADR-014).
+// Sin FK a RagIngestionRecord a proposito: el puerto KnowledgeBaseIndex.index() (generico,
+// implementado por PostgresKnowledgeBaseIndex) no conoce el id del registro de ingesta -- solo
+// IngestKnowledgeBaseUseCase lo conoce, y acoplar el puerto a ese detalle de un unico llamador
+// habria sido una fuga de abstraccion. `sourceFileName` da la misma trazabilidad practica
+// (que fichero origino el chunk) sin necesitar la relacion formal (hueco detectado al
+// implementar PostgresKnowledgeBaseIndex, ver STATUS.md).
 model RagChunk {
-  id                 String                  @id @default(uuid())
-  ingestionRecordId  String                  @map("ingestion_record_id")
-  chunkIndex         Int                     @map("chunk_index")
-  content            String
-  embedding          Unsupported("vector(384)")
-
-  ingestionRecord RagIngestionRecord @relation(fields: [ingestionRecordId], references: [id])
+  id             String                     @id @default(uuid())
+  sourceFileName String                     @map("source_file_name")
+  chunkIndex     Int                        @map("chunk_index")
+  content        String
+  embedding      Unsupported("vector(384)")
 
   @@map("rag_chunks")
 }

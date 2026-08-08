@@ -46,9 +46,9 @@ Texto plano y Markdown (`.txt`, `.md`). PDF/DOCX quedan fuera de alcance de v1 �
 Dos modelos nuevos en `database/schema.prisma`, mismas convenciones que ADR-013 (`String @id @default(uuid())`, `@map` a snake_case, `@@map` para el nombre de tabla):
 
 - **`RagIngestionRecord`** (`rag_ingestion_records`): un registro por fichero procesado — `id`, `fileName`, `status` (enum `RagIngestionStatus`: `Processed @map("processed")` / `Error @map("error")`, mismo patrón que `GeneratedBy`), `errorMessage` (nullable), `chunkCount`, `processedAt`.
-- **`RagChunk`** (`rag_chunks`): un chunk embebido por fila — `id`, `ingestionRecordId` (FK a `RagIngestionRecord`), `chunkIndex`, `content` (texto del chunk, se conserva para poder interpolarlo en el prompt sin tener que decodificar el vector), `embedding Unsupported("vector(384)")`.
+- **`RagChunk`** (`rag_chunks`): un chunk embebido por fila — `id`, `sourceFileName`, `chunkIndex`, `content` (texto del chunk, se conserva para poder interpolarlo en el prompt sin tener que decodificar el vector), `embedding Unsupported("vector(384)")`.
 
-No hay FK a `Tema` ni a `Exercise` — coherente con "sin tagging en la ingesta" de arriba.
+No hay FK a `Tema`, `Exercise` ni `RagIngestionRecord` — coherente con "sin tagging en la ingesta" de arriba. **Adenda (2026-08-08, al implementar)**: la versión original de este ADR proponía `ingestionRecordId` como FK a `RagIngestionRecord`. Al implementar `PostgresKnowledgeBaseIndex` se detectó que el puerto `KnowledgeBaseIndex.index()` (genérico, sin conocer qué proceso de ingesta lo llama) no tiene forma de rellenar esa FK sin acoplarse a `IngestKnowledgeBaseUseCase` — su único llamador hoy, pero no algo que el puerto deba conocer. Sustituida por `sourceFileName`/`chunkIndex` como campos planos: misma trazabilidad práctica (qué fichero, qué posición dentro de él) sin la relación formal.
 
 ### Nuevos puertos (`packages/shared-domain`)
 

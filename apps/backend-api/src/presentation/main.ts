@@ -19,6 +19,8 @@ import { PrismaSessionRepository } from '../infrastructure/repositories/PrismaSe
 import { PrismaExerciseRepository } from '../infrastructure/repositories/PrismaExerciseRepository.js'
 import { PrismaAnswerRepository } from '../infrastructure/repositories/PrismaAnswerRepository.js'
 import { PrismaHintRepository } from '../infrastructure/repositories/PrismaHintRepository.js'
+import { PostgresKnowledgeBaseIndex } from '../infrastructure/rag/PostgresKnowledgeBaseIndex.js'
+import { XenovaEmbedder } from '../infrastructure/rag/XenovaEmbedder.js'
 import { RegisterUseCase } from '../application/use-cases/RegisterUseCase.js'
 import { LoginUseCase } from '../application/use-cases/LoginUseCase.js'
 import { StartSessionUseCase } from '../application/use-cases/StartSessionUseCase.js'
@@ -93,9 +95,14 @@ const clock = { now: () => new Date() }
 const passwordHasher = new BcryptPasswordHasher()
 const tokenIssuer = new JwtTokenIssuer(JWT_SECRET)
 
+// UC-011/ADR-014: retrieval real de la base de conocimiento (pgvector). Si no hay material
+// consolidado para un Tema/Exercise, search() devuelve [] y la generacion sigue igual que
+// hoy -- comportamiento aditivo, no bloqueante (US-008).
+const knowledgeBase = new PostgresKnowledgeBaseIndex(prisma, new XenovaEmbedder())
+
 const hintGenerator =
   QWEN_API_KEY && QWEN_BASE_URL
-    ? new QwenHintGenerator(new QwenClient(new LangChainQwenModel(QWEN_API_KEY, QWEN_BASE_URL)))
+    ? new QwenHintGenerator(new QwenClient(new LangChainQwenModel(QWEN_API_KEY, QWEN_BASE_URL)), knowledgeBase)
     : undefined
 if (!hintGenerator) {
   console.warn('QWEN_API_KEY/QWEN_BASE_URL not set -- POST /hints will fail until configured.')

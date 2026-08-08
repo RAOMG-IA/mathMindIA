@@ -5,6 +5,7 @@ import type {
   ExerciseRepository,
   ExerciseType,
   IdGenerator,
+  KnowledgeBaseIndex,
   Tema,
 } from '@mathmind/shared-domain'
 import type { QwenClient } from '../llm/QwenClient.js'
@@ -38,6 +39,10 @@ const MAX_ATTEMPTS = 3
 // que INITIAL_RATING: 15s es un presupuesto razonable de calculo mental, sin calibrar.
 const DEFAULT_TIME_LIMIT_MS = 15000
 
+// UC-001 paso 2 (retrieval, ver ADR-014_rag.md): cuantos chunks recuperar como maximo.
+// Judgment call documentado, mismo criterio que MAX_ATTEMPTS/DEFAULT_TIME_LIMIT_MS de arriba.
+const TOP_K = 3
+
 function violatesExerciseInvariant(type: ExerciseType, output: GenerateExerciseOutput): boolean {
   if (type === 'Test') {
     return !output.options?.includes(output.correctAnswer)
@@ -50,6 +55,7 @@ export class GenerateExerciseBatchUseCase {
     private readonly qwen: Pick<QwenClient, 'generateExercise'>,
     private readonly exercises: ExerciseRepository,
     private readonly ids: IdGenerator,
+    private readonly knowledgeBase: KnowledgeBaseIndex,
   ) {}
 
   async execute(input: GenerateExerciseBatchInput): Promise<GenerateExerciseBatchOutput> {
@@ -60,6 +66,11 @@ export class GenerateExerciseBatchUseCase {
 
     const targetDifficulty = (levelRange.difficultyRange.min + levelRange.difficultyRange.max) / 2
 
+    // UC-001 paso 2 (ADR-014_rag.md): recuperar material relevante, si existe. Sin tagging
+    // fichero->Tema en la ingesta -- la query sale de lo que ya se conoce del Tema.
+    const query = `${input.tema.code} ${input.tema.description}`
+    const context = await this.knowledgeBase.search(query, TOP_K)
+
     let lastError: Error = new Error('GenerateExerciseBatchUseCase: no attempts were made')
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
       const generated = await this.qwen.generateExercise({
@@ -67,6 +78,7 @@ export class GenerateExerciseBatchUseCase {
         academicLevel: input.academicLevel,
         type: input.type,
         targetDifficulty,
+        context,
       })
 
       if (violatesExerciseInvariant(input.type, generated)) {

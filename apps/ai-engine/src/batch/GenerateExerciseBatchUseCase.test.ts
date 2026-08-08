@@ -7,7 +7,11 @@
 // cuerpo). Se espera que este archivo FALLE al ejecutarse hasta que el Developer Agent la
 // implemente.
 import { beforeEach, describe, expect, it } from 'vitest'
-import { InMemoryExerciseRepository, SequentialIdGenerator } from '@mathmind/shared-testing'
+import {
+  InMemoryExerciseRepository,
+  InMemoryKnowledgeBaseIndex,
+  SequentialIdGenerator,
+} from '@mathmind/shared-testing'
 import type { Tema } from '@mathmind/shared-domain'
 import type { QwenClient } from '../llm/QwenClient.js'
 import type { GenerateExerciseInput, GenerateExerciseOutput } from '../prompts/GenerateExercise.js'
@@ -52,7 +56,12 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
     const qwen = new QueuedExerciseGenerator([
       { statement: '15 + 27', correctAnswer: '42', explanation: '15 + 27 = 42' },
     ])
-    const useCase = new GenerateExerciseBatchUseCase(qwen, exercises, new SequentialIdGenerator('exercise'))
+    const useCase = new GenerateExerciseBatchUseCase(
+      qwen,
+      exercises,
+      new SequentialIdGenerator('exercise'),
+      new InMemoryKnowledgeBaseIndex(),
+    )
 
     const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Resolution' })
 
@@ -71,7 +80,12 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
     const qwen = new QueuedExerciseGenerator([
       { statement: '15 + 27', options: ['40', '42', '45'], correctAnswer: '42', explanation: '15 + 27 = 42' },
     ])
-    const useCase = new GenerateExerciseBatchUseCase(qwen, exercises, new SequentialIdGenerator('exercise'))
+    const useCase = new GenerateExerciseBatchUseCase(
+      qwen,
+      exercises,
+      new SequentialIdGenerator('exercise'),
+      new InMemoryKnowledgeBaseIndex(),
+    )
 
     const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' })
 
@@ -85,7 +99,12 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
       { statement: '15 + 27', correctAnswer: '42', explanation: '15 + 27 = 42' },
       { statement: '15 + 27', options: ['40', '42', '45'], correctAnswer: '42', explanation: '15 + 27 = 42' },
     ])
-    const useCase = new GenerateExerciseBatchUseCase(qwen, exercises, new SequentialIdGenerator('exercise'))
+    const useCase = new GenerateExerciseBatchUseCase(
+      qwen,
+      exercises,
+      new SequentialIdGenerator('exercise'),
+      new InMemoryKnowledgeBaseIndex(),
+    )
 
     const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' })
 
@@ -99,7 +118,12 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
       { statement: 'b', correctAnswer: 'x', explanation: 'e' },
       { statement: 'c', correctAnswer: 'x', explanation: 'e' },
     ])
-    const useCase = new GenerateExerciseBatchUseCase(qwen, exercises, new SequentialIdGenerator('exercise'))
+    const useCase = new GenerateExerciseBatchUseCase(
+      qwen,
+      exercises,
+      new SequentialIdGenerator('exercise'),
+      new InMemoryKnowledgeBaseIndex(),
+    )
 
     await expect(
       useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' }),
@@ -116,7 +140,12 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
 
   it('lanza si el Tema no aplica al AcademicLevel pedido', async () => {
     const qwen = new QueuedExerciseGenerator([])
-    const useCase = new GenerateExerciseBatchUseCase(qwen, exercises, new SequentialIdGenerator('exercise'))
+    const useCase = new GenerateExerciseBatchUseCase(
+      qwen,
+      exercises,
+      new SequentialIdGenerator('exercise'),
+      new InMemoryKnowledgeBaseIndex(),
+    )
 
     await expect(
       useCase.execute({ tema: aTema(), academicLevel: 'Secundaria', type: 'Resolution' }),

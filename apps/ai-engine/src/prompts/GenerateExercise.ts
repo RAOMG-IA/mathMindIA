@@ -5,6 +5,8 @@ import type { AcademicLevel, ExerciseType, TemaCode } from '@mathmind/shared-dom
 // tema.description y targetDifficulty vienen del catalogo de ADR-006
 // (docs/ADR/ADR-006_math_topics.md) -- description como prompt hint, difficultyRange
 // como target de exerciseRating inicial (ADR-005).
+// context: chunks recuperados de la base de conocimiento (UC-011/ADR-014), opcional -- un
+// Tema sin material consolidado sigue generando igual, ver GenerateExerciseBatchUseCase.
 export interface GenerateExerciseInput {
   readonly tema: {
     readonly code: TemaCode
@@ -13,6 +15,7 @@ export interface GenerateExerciseInput {
   readonly academicLevel: AcademicLevel
   readonly type: ExerciseType
   readonly targetDifficulty: number
+  readonly context?: readonly string[]
 }
 
 // UC-001 paso 3: lo que Qwen debe devolver. Se valida en el paso 4 contra las
@@ -44,6 +47,9 @@ export function buildGenerateExercisePrompt(input: GenerateExerciseInput): strin
     input.type === 'Test'
       ? 'Incluye exactamente 3 opciones en "options" y la respuesta correcta en "correctAnswer" (debe coincidir con una de las opciones).'
       : 'No incluyas la clave "options": el usuario debe resolverlo escribiendo la respuesta.',
+    ...(input.context && input.context.length > 0
+      ? [`Apoyate en este material de referencia, aportado por un administrador del sistema:\n${input.context.join('\n---\n')}`]
+      : []),
     'Responde UNICAMENTE con un objeto JSON con las claves: statement, options (opcional), correctAnswer, explanation. Sin texto adicional.',
   ].join('\n')
 }

@@ -1,0 +1,478 @@
+openapi: 3.0.3
+info:
+  title: MathMind AI - Backend API
+  description: >
+    API REST de mathMindIA (entrenamiento de cálculo mental adaptativo). Generado a partir del
+    código real de `apps/backend-api/src/presentation/http` (routes.ts, Controllers, DTOs de
+    `packages/shared-types/src/dtos`) -- ver `ARCHITECTURE.md` ("API REST (Rutas)") para el
+    diseño original. No es una versión aspiracional: los códigos de estado y formas de error
+    reflejan exactamente `errorMapping.ts`/`authMiddleware.ts`.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:3000
+    description: Desarrollo local (PORT de .env.example)
+tags:
+  - name: Auth
+    description: Registro y login (US-001, US-002). Sin autenticación.
+  - name: Sessions
+    description: Iniciar/finalizar una sesión de entrenamiento (UC-005, UC-006).
+  - name: Answers
+    description: Responder ejercicios (UC-002, compone UC-008 en la misma respuesta).
+  - name: Hints
+    description: Solicitar pistas en Modo Resolución (UC-003).
+  - name: Statistics
+    description: Estadísticas del usuario autenticado (UC-007).
+  - name: Health
+    description: Comprobación de disponibilidad del servidor.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >
+        `Authorization: Bearer <sessionToken>` -- el sessionToken opaco devuelto por
+        /auth/register o /auth/login. El middleware lo resuelve a un userId inyectado en el
+        Controller; el userId nunca se toma del body (ver ARCHITECTURE.md, "API REST").
+        Mecanismo interno del token (JWT vs sesión de servidor) fuera de alcance de US-002.
+
+  schemas:
+    AcademicLevel:
+      type: string
+      enum: [Primaria, Secundaria, Bachillerato, Ingenieria]
+
+    ExerciseType:
+      type: string
+      enum: [Test, Resolution]
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+      example:
+        error: "No active session: <sessionId>"
+
+    ForbiddenResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          enum: ["Forbidden or invalid session"]
+      description: >
+        Mensaje genérico fijo -- rutas protegidas por verificación de propiedad de una Session
+        (IDOR, hallazgo Security 2026-08-07). No distingue "sesión inexistente" de "sesión de
+        otro usuario" para no confirmarle a un atacante la existencia de un sessionId ajeno.
+
+    UnauthorizedResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          enum: ["Unauthorized"]
+
+    ExercisePublicDto:
+      type: object
+      description: >
+        Forma pública de un Exercise antes de responder (UC-005, UC-008). Nunca incluye
+        correctAnswer, explanation ni difficulty.
+      required: [id, type, statement, timeLimitMs]
+      properties:
+        id:
+          type: string
+        type:
+          $ref: "#/components/schemas/ExerciseType"
+        statement:
+          type: string
+        options:
+          type: array
+          description: Solo presente si type=Test. Exactamente 3 elementos.
+          items:
+            type: string
+          minItems: 3
+          maxItems: 3
+        timeLimitMs:
+          type: integer
+
+    RegisterRequestDto:
+      type: object
+      required: [email, password, academicLevel]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          description: "Mínimo 8 caracteres (OWASP ASVS L1, hallazgo Security 2026-08-07)."
+        academicLevel:
+          $ref: "#/components/schemas/AcademicLevel"
+
+    RegisterResponseDto:
+      type: object
+      required: [userId, sessionToken]
+      properties:
+        userId:
+          type: string
+        sessionToken:
+          type: string
+
+    LoginRequestDto:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponseDto:
+      type: object
+      required: [userId, sessionToken]
+      properties:
+        userId:
+          type: string
+        sessionToken:
+          type: string
+
+    SessionDto:
+      type: object
+      required: [id, mode, academicLevel, startedAt]
+      properties:
+        id:
+          type: string
+        mode:
+          $ref: "#/components/schemas/ExerciseType"
+        academicLevel:
+          $ref: "#/components/schemas/AcademicLevel"
+        startedAt:
+          type: string
+          format: date-time
+
+    StartSessionRequestDto:
+      type: object
+      required: [mode, academicLevel, topic]
+      properties:
+        mode:
+          $ref: "#/components/schemas/ExerciseType"
+        academicLevel:
+          $ref: "#/components/schemas/AcademicLevel"
+        topic:
+          type: string
+          description: TemaCode del catálogo (ADR-006), p.ej. "arit.suma-resta".
+
+    StartSessionResponseDto:
+      type: object
+      required: [session, exercise]
+      properties:
+        session:
+          $ref: "#/components/schemas/SessionDto"
+        exercise:
+          $ref: "#/components/schemas/ExercisePublicDto"
+
+    EndSessionRequestDto:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId:
+          type: string
+
+    EndSessionResponseDto:
+      type: object
+      required: [totalAttempts, correctAttempts, avgResponseTimeMs, ratingChange]
+      properties:
+        totalAttempts:
+          type: integer
+        correctAttempts:
+          type: integer
+        avgResponseTimeMs:
+          type: number
+        ratingChange:
+          type: number
+          description: Variación de rating (ADR-005) desde el inicio de la sesión. Puede ser negativa.
+
+    SubmitAnswerRequestDto:
+      type: object
+      required: [sessionId, exerciseId, submittedValue, responseTimeMs]
+      properties:
+        sessionId:
+          type: string
+        exerciseId:
+          type: string
+        submittedValue:
+          type: string
+        responseTimeMs:
+          type: integer
+
+    SubmitAnswerResponseDto:
+      type: object
+      required: [isCorrect, explanation]
+      description: >
+        Compone UC-002 (validar respuesta) y UC-008 (siguiente ejercicio) en una sola respuesta
+        para evitar un segundo round-trip -- siguen siendo Casos de Uso separados en el backend.
+      properties:
+        isCorrect:
+          type: boolean
+        explanation:
+          type: string
+        nextExercise:
+          allOf:
+            - $ref: "#/components/schemas/ExercisePublicDto"
+          description: Ausente si el pool de ejercicios está agotado (UC-008, flujo alternativo 2b).
+
+    RequestHintRequestDto:
+      type: object
+      required: [sessionId, exerciseId, elapsedMs]
+      properties:
+        sessionId:
+          type: string
+        exerciseId:
+          type: string
+        elapsedMs:
+          type: integer
+          description: Tiempo transcurrido desde que se mostró el ejercicio, en ms.
+
+    RequestHintResponseDto:
+      type: object
+      required: [content, order, hintsUsedSoFar]
+      properties:
+        content:
+          type: string
+        order:
+          type: integer
+        hintsUsedSoFar:
+          type: integer
+
+    TopicStatDto:
+      type: object
+      required: [topic, area, accuracy, attemptCount]
+      properties:
+        topic:
+          type: string
+        area:
+          type: string
+        accuracy:
+          type: number
+          minimum: 0
+          maximum: 1
+        attemptCount:
+          type: integer
+
+    GetUserStatisticsResponseDto:
+      type: object
+      required: [score, rating, academicLevel, byTopic]
+      properties:
+        score:
+          type: integer
+        rating:
+          type: number
+        academicLevel:
+          $ref: "#/components/schemas/AcademicLevel"
+        byTopic:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicStatDto"
+
+  responses:
+    Unauthorized:
+      description: >
+        Sin token, o token inválido/expirado (authMiddleware.ts). Todas las rutas protegidas.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/UnauthorizedResponse"
+    BadRequest:
+      description: >
+        Error de producto con mensaje real (email duplicado, Tema inválido, credenciales
+        incorrectas, etc. -- exposeMessage=true en errorMapping.ts).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: >
+        Sesión inexistente o de otro usuario (IDOR) -- mensaje genérico fijo, no distingue la
+        causa (exposeMessage=false en errorMapping.ts).
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ForbiddenResponse"
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Comprobación de disponibilidad
+      security: []
+      responses:
+        "200":
+          description: Servidor activo
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registro (US-001, UC-009)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequestDto"
+      responses:
+        "200":
+          description: Registrado correctamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponseDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login (US-002, UC-010)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequestDto"
+      responses:
+        "200":
+          description: Login correcto
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponseDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+          description: >
+            Mensaje genérico idéntico para email inexistente y contraseña incorrecta
+            (LoginUseCase, no distingue la causa).
+
+  /sessions:
+    post:
+      tags: [Sessions]
+      summary: Iniciar sesión de entrenamiento (US-003, UC-005)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartSessionRequestDto"
+      responses:
+        "200":
+          description: Sesión iniciada, con el primer ejercicio
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StartSessionResponseDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+          description: Tema inválido para el AcademicLevel pedido, u otro error de producto.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /sessions/end:
+    post:
+      tags: [Sessions]
+      summary: Finalizar sesión (US-006, UC-006)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EndSessionRequestDto"
+      responses:
+        "200":
+          description: Resumen de la sesión finalizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EndSessionResponseDto"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /answers:
+    post:
+      tags: [Answers]
+      summary: Responder un ejercicio (US-004, UC-002 + UC-008)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitAnswerRequestDto"
+      responses:
+        "200":
+          description: Resultado de la respuesta, con el siguiente ejercicio si hay disponible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmitAnswerResponseDto"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /hints:
+    post:
+      tags: [Hints]
+      summary: Solicitar una pista (US-005, UC-003)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RequestHintRequestDto"
+      responses:
+        "200":
+          description: Pista generada (o reutilizada si ya existía para ese order)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RequestHintResponseDto"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /users/me/statistics:
+    get:
+      tags: [Statistics]
+      summary: Estadísticas del usuario autenticado (US-007, UC-007)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Estadísticas agregadas por tema
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUserStatisticsResponseDto"
+        "401":
+          $ref: "#/components/responses/Unauthorized"

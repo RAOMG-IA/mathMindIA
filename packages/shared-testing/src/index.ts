@@ -10,6 +10,10 @@ export * from './mocks/SequentialIdGenerator.js'
 export * from './mocks/InMemoryHintUsageTracker.js'
 export * from './mocks/FakePasswordHasher.js'
 export * from './mocks/FakeTokenIssuer.js'
+export * from './mocks/FakeEmbedder.js'
+export * from './mocks/InMemoryKnowledgeBaseIndex.js'
+export * from './mocks/InMemoryRagIngestionRepository.js'
+export * from './mocks/InMemoryIngestionFileSystem.js'
 
 // builders/factories/fixtures: pendientes -- ningun Caso de Uso implementado los necesita
 // todavia (ver README.md de este paquete).

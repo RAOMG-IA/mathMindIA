@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest'
 import type { GenerateHintInput, GenerateHintOutput, QwenClient } from '@mathmind/ai-engine'
 import type { Exercise, ExerciseId } from '@mathmind/shared-domain'
+import { InMemoryKnowledgeBaseIndex } from '@mathmind/shared-testing'
 import { QwenHintGenerator } from './QwenHintGenerator.js'
 
 class FakeQwenClient implements Pick<QwenClient, 'generateHint'> {
@@ -39,7 +40,7 @@ function anExercise(overrides: Partial<Exercise> = {}): Exercise {
 describe('QwenHintGenerator', () => {
   it('mapea exercise/order/previousHints a GenerateHintInput y devuelve el content de QwenClient', async () => {
     const qwen = new FakeQwenClient({ content: 'Piensa en decenas' })
-    const generator = new QwenHintGenerator(qwen)
+    const generator = new QwenHintGenerator(qwen, new InMemoryKnowledgeBaseIndex())
 
     const result = await generator.generate({
       exercise: anExercise(),
@@ -54,6 +55,7 @@ describe('QwenHintGenerator', () => {
         correctAnswer: '42',
         previousHints: ['Suma primero las decenas'],
         hintOrder: 2,
+        context: [],
       },
     ])
   })
@@ -64,7 +66,7 @@ describe('QwenHintGenerator', () => {
         throw new Error('Qwen unavailable')
       },
     }
-    const generator = new QwenHintGenerator(failingQwen)
+    const generator = new QwenHintGenerator(failingQwen, new InMemoryKnowledgeBaseIndex())
 
     await expect(
       generator.generate({ exercise: anExercise(), order: 1, previousHints: [] }),

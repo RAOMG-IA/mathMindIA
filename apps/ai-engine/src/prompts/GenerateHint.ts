@@ -4,11 +4,14 @@ import { z } from 'zod'
 // para ese (exerciseId, order). Incluye correctAnswer para que Qwen genere una pista
 // informada sin revelarla directamente, y previousHints para que la progresion sea
 // cada vez mas detallada (US-005, escenario "Pistas progresivas").
+// context: chunks recuperados de la base de conocimiento (UC-011/ADR-014), opcional -- un
+// Tema sin material consolidado sigue generando igual, ver QwenHintGenerator.
 export interface GenerateHintInput {
   readonly exerciseStatement: string
   readonly correctAnswer: string
   readonly previousHints: readonly string[]
   readonly hintOrder: number
+  readonly context?: readonly string[]
 }
 
 export interface GenerateHintOutput {
@@ -33,6 +36,9 @@ export function buildGenerateHintPrompt(input: GenerateHintInput): string {
       ? `Pistas ya dadas, en orden: ${formatPreviousHints(input.previousHints)}`
       : 'Esta es la primera pista para este ejercicio.',
     `Genera la pista numero ${input.hintOrder}, mas especifica que las anteriores pero sin revelar la respuesta.`,
+    ...(input.context && input.context.length > 0
+      ? [`Apoyate en este material de referencia, aportado por un administrador del sistema:\n${input.context.join('\n---\n')}`]
+      : []),
     'Responde UNICAMENTE con un objeto JSON con la clave: content. Sin texto adicional.',
   ].join('\n')
 }
