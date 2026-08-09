@@ -3,6 +3,40 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — `EmailInput`/`PasswordInput`: componentes de input compartidos, sustituidos en Login/Register
+
+**Input**: el usuario pidió un componente de `TextInput` personalizado reutilizable con dos variantes — email (validación de formato, opcionalmente "existencia" para registro) y contraseña (icono de "ojo" que revela el valor en hover/pulsación mantenida) — y sustituirlos en ambas pantallas ya existentes.
+
+**Contexto utilizado**: `LoginScreen.styles.ts`/`RegisterScreen.styles.ts` (bloques `field`/`label`/`input`/`inputError`/`errorText` duplicados byte a byte entre las dos pantallas — la señal real de que este refactor tenía sentido); ADR-012 (el login debe dar un error genérico, nunca confirmar si el email existe) como restricción de diseño para no acoplar `EmailInput` a un chequeo de existencia en red.
+
+**Decisión tomada, tras aclarar con el usuario (AskUserQuestion)**: la "validación de existencia" pedida para el registro no implica una llamada de red nueva ni un endpoint de existencia (eso sería, además, un vector de enumeración de cuentas) — el usuario eligió mostrar solo el error real que ya devuelve el servidor al enviar el formulario. `EmailInput`/`PasswordInput` quedan puramente presentacionales: reciben `value`/`onChangeText`/`error` y no saben nada de validación de formato ni de red — la validación de formato la sigue haciendo cada pantalla (`*.validation.ts`, sin cambios); el error de "email ya registrado" en `RegisterScreen` ahora se enruta específicamente al prop `error` de `EmailInput` (`emailTakenError`, derivado de `register.error.message`), en vez de solo al banner genérico — es la realización concreta de "validar la existencia... como en el caso del registro", distinta de `LoginScreen`, que sigue mostrando el error de servidor solo en el banner genérico (ADR-012: nunca debe indicar si el email existe).
+
+**`PasswordInput`**: revelado por mantener pulsado, no por alternar — `Pressable` combina `onHoverIn`/`onHoverOut` (web) con `onPressIn`/`onPressOut` (touch y ratón), interpretando literalmente "hover o touchscreen" del usuario como mantener, no como un toggle persistente. Glifos Unicode (`👁️`/`🙈`), sin `@expo/vector-icons` nuevo — mismo criterio que las estrellas de `RegisterScreen` y los símbolos de `NeuralLoader`.
+
+**Refactor de estilos**: los bloques `field`/`label`/`input`/`inputError`/`errorText` idénticos de `LoginScreen.styles.ts`/`RegisterScreen.styles.ts` se centralizan en `src/components/inputs/styles.ts` (junto con `passwordRow`/`passwordInput`/`eyeButton`/`eyeIcon`, nuevos). `LoginScreen.styles.ts` los pierde por completo (no le queda ningún campo propio fuera de los dos componentes); `RegisterScreen.styles.ts` conserva `field`/`label`/`errorText` porque el selector de estrellas de nivel de complejidad sigue siendo local a esa pantalla.
+
+**Problema real encontrado y corregido — caché de Metro obsoleta, no un bug de código**: al verificar en el servidor de desarrollo ya corriendo desde tareas anteriores, el bundle fallaba de forma persistente con `Unable to resolve module ./styles from EmailInput.tsx` pese a que el fichero existía en disco con el contenido correcto — a diferencia del error transitorio de `ParticleField` visto en la tarea anterior (que se autocorregía en el siguiente bundle), este error se repitió sin cambiar en decenas de rebundles sucesivos y seguía presente al reanudar la sesión. Diagnosticado como caché de Metro corrompida/desincronizada del proceso de larga duración (Watchman/haste map no recogió los ficheros nuevos). Corregido reiniciando el servidor con caché limpia (`expo start --web -c`); confirmado con un bundle completo limpio (`Web Bundled ... 1329 modules`, cero líneas `ERROR`/`Unable to resolve` en el log) antes de volver a modo watch normal para el resto de la sesión.
+
+**Output generado**: `apps/mobile-app/src/components/inputs/{EmailInput.tsx,PasswordInput.tsx,styles.ts,index.ts}` (nuevos), `src/components/index.ts` actualizado (reexporta ambos). `LoginScreen.tsx`/`RegisterScreen.tsx` actualizados (sustituyen los `TextInput` inline); `LoginScreen.styles.ts`/`RegisterScreen.styles.ts` con los estilos duplicados eliminados. Sin test nuevo — presentacionales puros, mismo criterio ya aceptado para el resto de UI visual de la sesión (26/26 tests de `mobile-app` sin cambios de cantidad, confirmando que ningún comportamiento probado se tocó). `npx turbo run typecheck lint test` → **32/32 en verde** en todo el monorepo. Verificado con bundle real (`node_modules/expo-router/entry.bundle?platform=web`, no solo la ruta HTML) y `curl` 200 en `/login` y `/register`, servidor en modo watch normal.
+
+---
+
+## 2026-08-09 — RegisterScreen (US-001): validador, pantalla real (TDD Green)
+
+**Input**: Red confirmado de `RegisterScreen.validation.test.ts` (Test Agent, fase previa, misma sesión).
+
+**Contexto utilizado**: `LoginScreen.tsx`/`.styles.ts` (patrón a replicar: `BackgroundGrid`+`ParticleField`+`card` centrada+`NeuralLoader` como loading state), `useRegister` (ya implementado, `onSuccess` ya escribe la sesión), `RegisterUseCase.ts` (los dos únicos mensajes de error reales, en inglés).
+
+**Decisión tomada**: `RegisterScreen.tsx`/`.styles.ts` replican la estructura de `LoginScreen` casi 1:1, con dos añadidos: selector de nivel académico y `describeRegisterError()`, que traduce el mensaje real del backend a español porque US-001 (a diferencia de US-002) exige un texto concreto, no solo genérico. Enlace de vuelta a `(auth)/login`.
+
+**Problema real encontrado y corregido de paso**: al crear `app/(auth)/register.tsx`, el `@ts-expect-error` que protegía `router.push('/(auth)/register')` en `LoginScreen.tsx` (añadido en la tarea anterior, a propósito para esto) pasó a ser un error real de TypeScript ("directiva no usada") — confirma que elegir `@ts-expect-error` en vez de `as any` fue la decisión correcta: forzó a limpiar la silenciación en el momento exacto en que dejó de hacer falta, sin necesitar acordarse manualmente. Quitada.
+
+**Refactor posterior, misma tarea**: el usuario pidió rediseñar el selector — de 4 chips independientes a 4 estrellas acumulativas (marcar la N-ésima marca también la 1..N-1, el dato es ordinal: "un ingeniero no puede ser sin tener primaria"), con una etiqueta que informa el nivel según la última estrella marcada, y renombrar la label "Nivel académico" → "Nivel de complejidad" (deliberado: evitar asociar lingüísticamente el nivel personal del usuario con el nivel que quiere practicar — mismo dato enviado a la API, solo copy). Estrellas como glifo Unicode (`★`/`☆`), sin icon library nueva — mismo criterio ya aplicado a los símbolos matemáticos de `NeuralLoader` y a evitar un `Picker` nativo.
+
+**Output generado**: `apps/mobile-app/src/screens/{RegisterScreen.tsx,RegisterScreen.styles.ts}`, `app/(auth)/register.tsx`. `LoginScreen.tsx` actualizado (quitado el `@ts-expect-error` ya innecesario). 5/5 tests verdes (los ya confirmados en Red — la lógica de `validateRegisterForm` no cambió con el rediseño del selector, sigue siendo `AcademicLevel | null`). `npx turbo run typecheck lint test` → 32/32 en verde (26/26 tests en `mobile-app`, antes 21). Verificado en navegador real (`http://localhost:8081/register`) — un error transitorio de hot-reload visto en el log del servidor (`ParticleField` `undefined` a mitad de la reconstrucción de commits de la tarea anterior) se autocorrigió y no es reproducible en el estado actual.
+
+---
+
 ## 2026-08-09 — LoginScreen: refinamientos de diseño (caja, fondo, registro, recuperar contraseña)
 
 **Input**: El usuario probó `LoginScreen` en el navegador (`npx expo start --web`, primera vez que se arranca el servidor real, no solo `expo export`) y pidió, en la misma sesión: formulario en caja centrada, fondo de partículas del `NeuralLoader` también aquí, botón "Registrarse" arriba a la derecha, enlace de "recuperar contraseña" bajo el botón de enviar.

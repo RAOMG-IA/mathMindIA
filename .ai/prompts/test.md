@@ -3,6 +3,18 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+## 2026-08-09 — Test de validateRegisterForm (TDD Red)
+
+**Input**: "comenzamos con la definicion de la siguiente pantalla 'Registro'" — segunda pantalla real de `mobile-app`, US-001.
+
+**Contexto utilizado**: `docs/user-stories/US-001-registro.md` (AC: nivel académico obligatorio, mensaje concreto para email ya registrado); `LoginScreen.validation.ts` (mismo patrón, ya establecido); `RegisterRequestDto` (`@mathmind/shared-types`) para derivar el tipo `AcademicLevel` sin depender directamente de `@mathmind/shared-domain`.
+
+**Decisión tomada**: `validateRegisterForm(email, password, academicLevel)` reutiliza `isValidEmail`/`isValidPassword` de `@mathmind/shared-utils` (mismos predicados que `LoginScreen`) y añade un tercer campo obligatorio, `academicLevel` (`null` = sin elegir). 5 tests: caso válido, cada campo inválido por separado, y los tres a la vez.
+
+**Output generado**: `apps/mobile-app/src/screens/RegisterScreen.validation.test.ts`. Verificado: `vitest run` → **falla con "Failed to load url ./RegisterScreen.validation... Does the file exist?"** — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión.
+
+---
+
 ## 2026-08-09 — Tests de shared-utils (email/password) y LoginScreen.validation (TDD Red)
 
 **Input**: "vamos a definir la pantalla de login... recuerda añadir la validacion del mail, y las normativa de contraseñas que establece security (si no esta definido añadelo a la capa shared-utils)".

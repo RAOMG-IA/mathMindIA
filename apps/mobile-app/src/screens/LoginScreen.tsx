@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import { useLogin } from '../api'
-import { BackgroundGrid, NeuralLoader, ParticleField } from '../components'
+import { BackgroundGrid, EmailInput, NeuralLoader, ParticleField, PasswordInput } from '../components'
 import { styles } from './LoginScreen.styles'
 import type { LoginFormErrors } from './LoginScreen.validation'
 import { validateLoginForm } from './LoginScreen.validation'
@@ -44,9 +44,6 @@ export function LoginScreen() {
   }
 
   function handleGoToRegister() {
-    // (auth)/register todavia no existe (pendiente ADR-015) -- mismo criterio que
-    // "/(app)/home" en handleSubmit: @ts-expect-error en vez de `as any`.
-    // @ts-expect-error -- ruta real pendiente de construir
     router.push('/(auth)/register')
   }
 
@@ -75,37 +72,9 @@ export function LoginScreen() {
         <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
 
         <View style={styles.card}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, fieldErrors.email ? styles.inputError : null]}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="tu@email.com"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              accessibilityLabel="Email"
-            />
-            {fieldErrors.email ? <Text style={styles.errorText}>{fieldErrors.email}</Text> : null}
-          </View>
+          <EmailInput value={email} onChangeText={setEmail} error={fieldErrors.email} />
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              style={[styles.input, fieldErrors.password ? styles.inputError : null]}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="••••••••"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel="Contraseña"
-            />
-            {fieldErrors.password ? <Text style={styles.errorText}>{fieldErrors.password}</Text> : null}
-          </View>
+          <PasswordInput value={password} onChangeText={setPassword} error={fieldErrors.password} />
 
           {login.isError ? (
             <View style={styles.serverErrorBanner}>
