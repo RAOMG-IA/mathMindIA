@@ -3,6 +3,24 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — LoginScreen (US-002): validadores, refactor de RegisterUseCase, pantalla real
+
+**Input**: Red confirmado de `shared-utils`/`LoginScreen.validation.test.ts` (Test Agent, fase previa, misma sesión).
+
+**Contexto utilizado**: `@tanstack/react-query`'s `useMutation` (`useLogin`, ya implementado); `NeuralLoader`/`BackgroundGrid`/`COLORS` (reexportados para el diseño); `LoginUseCase.ts` (`INVALID_CREDENTIALS_MESSAGE = 'Invalid email or password'`, mensaje genérico ya correcto en el backend); `expo-router`'s `useRouter`.
+
+**Decisión tomada**: `isValidEmail` implementado sin regex (`indexOf`/`slice`, no `[^\s@]+@[^\s@]+\.[^\s@]+` — un linter marcó ese patrón por backtracking cuadrático ante input adversarial; con `indexOf` el coste es O(n) sin ambigüedad). `RegisterUseCase` importa `isValidPassword`/`MIN_PASSWORD_LENGTH` de `@mathmind/shared-utils` en vez de su constante local. `LoginScreen.tsx`: mientras `useLogin().isPending`, renderiza `<NeuralLoader/>` en vez del formulario (reutilización real, no solo estética); error de servidor mostrado tal cual (`login.error.message`); sin ruta a `(app)/home` todavía (Expo Router muestra "Unmatched Route" hasta que exista, sin romper nada).
+
+**Problema real encontrado y corregido de paso (2)**:
+1. Sin `QueryClientProvider` en el árbol, `useLogin()` habría fallado en cuanto se renderizara de verdad — ningún hook de `src/api` se había montado en un componente real hasta ahora. Añadido a `app/_layout.tsx` (`useState(() => new QueryClient())`).
+2. El smoke-test de bundle web (`expo export --platform web`) reveló que `shared-utils`'s barrel (`export * from './validation/email.js'`) rompía Metro (`Unable to resolve module ./validation/email.js`) pese a typecheckear bien bajo `tsc` -- NodeNext (`backend-api`) exige la extensión, Metro no la traduce a `.ts`. `shared-types` usa el mismo patrón sin problema porque sus exports son interfaces (se borran al compilar, nunca llegan a Metro). Resuelto consolidando `shared-utils` en un único fichero `index.ts`, sin imports relativos internos que puedan entrar en conflicto.
+
+**Refactor posterior (misma tarea, a petición del usuario)**: "extrae de los ficheros js las configuraciones css e importalas de sus respectivos ficheros en .src/css/xxx.css" — aclarado primero con el usuario (AskUserQuestion) que React Native no soporta `.css` reales en iOS/Android (solo `StyleSheet.create`, sin loader CSS en Metro para nativo); confirmado extraer a ficheros `*.styles.ts` sidecar en su lugar (`NeuralLoader.styles.ts`, `StatusPill.styles.ts`, `LoginScreen.styles.ts`), misma separación lógica/estilo sin romper ninguna plataforma.
+
+**Output generado**: `packages/shared-utils/src/index.ts` (+2 tests movidos a `email.test.ts`/`password.test.ts`, mismo directorio). `RegisterUseCase.ts` actualizado. `apps/mobile-app/src/screens/{LoginScreen.tsx,LoginScreen.validation.ts,LoginScreen.styles.ts}`, `app/(auth)/login.tsx`, `app/_layout.tsx` actualizado. `NeuralLoader.styles.ts`/`StatusPill.styles.ts` nuevos, `NeuralLoader.tsx`/`StatusPill.tsx` actualizados. `@mathmind/shared-utils` añadido como dependencia de `backend-api` y `mobile-app`. Verificado con bundle real de web dos veces (antes y después del refactor de estilos), montado temporalmente en `app/index.tsx` y revertido. `npx turbo run typecheck lint test` → 32/32 en verde (21/21 tests en `mobile-app`, 9/9 en `shared-utils`, 79/79 en `backend-api` sin cambios de resultado).
+
+---
+
 ## 2026-08-09 — Componente `NeuralLoader` (UI pura, sin ciclo TDD)
 
 **Input**: "implementa el componente" — tras dos rondas de iteración visual sobre un prototipo HTML/CSS/SVG publicado como Artifact (spec de diseño exacta aportada por el usuario; corrección de geometría del cráneo/cerebro; integración del SVG real de cráneo/cerebro aportado por el usuario), el usuario aprobó el diseño y pidió el componente React Native real.

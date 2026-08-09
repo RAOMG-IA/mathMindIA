@@ -1,4 +1,5 @@
 import { SEED_RATING_BY_LEVEL } from '@mathmind/shared-domain'
+import { isValidPassword, MIN_PASSWORD_LENGTH } from '@mathmind/shared-utils'
 import type {
   AcademicLevel,
   Clock,
@@ -25,11 +26,6 @@ export interface RegisterOutput {
   readonly sessionToken: string
 }
 
-// Hallazgo Security 2026-08-07: US-001/ADR-012 dejaban la politica de contrasena "a definir al
-// implementar" -- sin este minimo, se aceptaba cualquier longitud. 8 caracteres sigue la guia
-// de OWASP ASVS L1 (longitud minima sobre reglas de complejidad).
-const MIN_PASSWORD_LENGTH = 8
-
 export class RegisterUseCase {
   constructor(
     private readonly users: UserRepository,
@@ -41,7 +37,10 @@ export class RegisterUseCase {
   ) {}
 
   async execute(input: RegisterInput): Promise<RegisterOutput> {
-    if (input.password.length < MIN_PASSWORD_LENGTH) {
+    // Hallazgo Security 2026-08-07: US-001/ADR-012 dejaban la politica de contrasena "a definir
+    // al implementar" -- sin este minimo, se aceptaba cualquier longitud. Regla real en
+    // @mathmind/shared-utils (OWASP ASVS L1), unica fuente de verdad compartida con mobile-app.
+    if (!isValidPassword(input.password)) {
       throw new Error(`Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
     }
 

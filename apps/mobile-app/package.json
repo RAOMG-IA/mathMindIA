@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@mathmind/shared-types": "*",
+    "@mathmind/shared-utils": "*",
     "@tanstack/react-query": "^5.56.0",
     "expo": "^57.0.0",
     "expo-blur": "~57.0.2",

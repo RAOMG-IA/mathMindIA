@@ -3,6 +3,18 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+## 2026-08-09 — Tests de shared-utils (email/password) y LoginScreen.validation (TDD Red)
+
+**Input**: "vamos a definir la pantalla de login... recuerda añadir la validacion del mail, y las normativa de contraseñas que establece security (si no esta definido añadelo a la capa shared-utils)".
+
+**Contexto utilizado**: `RegisterUseCase.ts` (`MIN_PASSWORD_LENGTH = 8`, OWASP ASVS L1, hallazgo Security 2026-08-07 — política ya existente pero solo como constante local, no reutilizable); `ARCHITECTURE.md` ("shared-utils": "Validation helpers", ejemplo ya anticipado); `packages/shared-utils` (paquete existente, `export {}` sin implementar); US-002 (AC de mensaje de error genérico en login).
+
+**Decisión tomada**: `isValidEmail`/`isValidPassword`+`MIN_PASSWORD_LENGTH` en `@mathmind/shared-utils` (9 tests: 6 de email — formato válido, sin @, sin dominio, con espacios, vacío, doble @; 3 de password — límite exacto, por debajo, por encima), única fuente de verdad para backend (`RegisterUseCase`) y mobile (`LoginScreen`). `validateLoginForm` en `apps/mobile-app/src/screens/LoginScreen.validation.ts` (4 tests) compone esos predicados con texto de error en español — separada de `LoginScreen.tsx` para no depender de `QueryClientProvider`/`renderHook`, mismo criterio que `src/api/requests/*.ts`.
+
+**Output generado**: `packages/shared-utils/src/{email,password}.test.ts`, `apps/mobile-app/src/screens/LoginScreen.validation.test.ts`. Verificado: `vitest run` → los 3 módulos fallan (`Does the file exist?`) — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión.
+
+---
+
 ## 2026-08-09 — Test de invalidateStatisticsOnSessionStart (TDD Red)
 
 **Input**: "implementa la funcionalida de tankstack invalidateQueries para limpiar la cache cuando el usuario cambie de nivel o cambie el modo de juego".

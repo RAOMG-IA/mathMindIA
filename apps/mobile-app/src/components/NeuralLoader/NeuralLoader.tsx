@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
-import { StyleSheet, useWindowDimensions, View } from 'react-native'
+import { useWindowDimensions, View } from 'react-native'
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
 import { ActivityZone } from './ActivityZone'
 import { BackgroundGrid } from './BackgroundGrid'
-import { ACTIVITY_ZONES, COLORS, EMERGING_SYMBOLS, SCAN_RINGS } from './constants'
+import { ACTIVITY_ZONES, EMERGING_SYMBOLS, SCAN_RINGS } from './constants'
 import { EmergingSymbol } from './EmergingSymbol'
 import { HeadAnatomy } from './HeadAnatomy'
+import { styles } from './NeuralLoader.styles'
 import { ParticleField } from './ParticleField'
 import { ScanRing } from './ScanRing'
 import { StatusPill } from './StatusPill'
@@ -72,12 +73,3 @@ export function NeuralLoader() {
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.background,
-  },
-})
