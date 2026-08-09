@@ -25,7 +25,7 @@ export function StatusPill() {
   const Wrapper = Platform.OS === 'web' ? View : BlurView
 
   return (
-    <View style={styles.container} pointerEvents="none">
+    <View style={[styles.container, { pointerEvents: 'none' }]}>
       <Wrapper intensity={40} tint="dark" style={styles.pill}>
         <Text style={styles.title}>escaner neuronal</Text>
         <Text style={styles.subtitle}> | procesando</Text>

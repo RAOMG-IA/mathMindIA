@@ -9,8 +9,8 @@ export const styles = StyleSheet.create({
   formWrapper: {
     flex: 1,
     justifyContent: 'center',
-    paddingHorizontal: 28,
-    gap: 4,
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
   title: {
     color: COLORS.ice,
@@ -23,7 +23,18 @@ export const styles = StyleSheet.create({
     opacity: 0.5,
     fontSize: 14,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
+  },
+  // Caja centrada que contiene el formulario -- separa visualmente los campos del fondo
+  // animado (grid + particulas), en vez de flotar sueltos sobre el.
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: 'rgba(255, 255, 255, 0.035)',
+    borderWidth: 1,
+    borderColor: 'rgba(76, 201, 240, 0.15)',
+    borderRadius: 20,
+    padding: 24,
   },
   field: {
     marginBottom: 16,
@@ -77,5 +88,32 @@ export const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 15,
     fontWeight: '700',
+  },
+  // Atenuado deliberadamente (opacity baja, sin subrayado) -- no es un enlace real todavia
+  // (sin User Story, ver comentario en LoginScreen.tsx), no debe leerse como interactivo.
+  forgotPasswordText: {
+    color: COLORS.ice,
+    opacity: 0.5,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 16,
+  },
+  // `top` real se fija en el componente (insets.top + margen) -- aqui solo el resto de la
+  // posicion, para no atar useSafeAreaInsets a este fichero de estilos puro.
+  registerButton: {
+    position: 'absolute',
+    right: 20,
+    zIndex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 201, 240, 0.25)',
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+  },
+  registerButtonText: {
+    color: COLORS.ice,
+    fontSize: 13,
+    fontWeight: '600',
   },
 })

@@ -1,1 +1,1 @@
-export { NeuralLoader, BackgroundGrid, COLORS } from './NeuralLoader'
+export { NeuralLoader, BackgroundGrid, ParticleField, COLORS } from './NeuralLoader'

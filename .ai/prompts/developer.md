@@ -3,6 +3,20 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — LoginScreen: refinamientos de diseño (caja, fondo, registro, recuperar contraseña)
+
+**Input**: El usuario probó `LoginScreen` en el navegador (`npx expo start --web`, primera vez que se arranca el servidor real, no solo `expo export`) y pidió, en la misma sesión: formulario en caja centrada, fondo de partículas del `NeuralLoader` también aquí, botón "Registrarse" arriba a la derecha, enlace de "recuperar contraseña" bajo el botón de enviar.
+
+**Contexto utilizado**: `NeuralLoader/ParticleField.tsx` (ya existía, solo no exportado); `react-native-safe-area-context` (dependencia desde el scaffolding, nunca montada); US-002/ADR-015 (recuperación de contraseña explícitamente "fuera de alcance" — se preguntó al usuario antes de inventar navegación real, AskUserQuestion, eligió texto atenuado sin acción).
+
+**Decisión tomada**: `LoginScreen.styles.ts` gana `card` (caja centrada, `maxWidth: 400`) envolviendo los campos. `ParticleField`/`COLORS`/`BackgroundGrid` reexportados desde `src/components` (antes solo `NeuralLoader`/`BackgroundGrid`/`COLORS`). `app/_layout.tsx` gana `SafeAreaProvider` (mismo patrón que el hueco de `QueryClientProvider` ya documentado) para poder usar `useSafeAreaInsets` en el botón "Registrarse" (`router.push('/(auth)/register')`, `@ts-expect-error` — ruta prevista en ADR-015, aún sin construir, mismo criterio que `/(app)/home`). "¿Olvidaste tu contraseña?" como `Text` puro, sin `onPress` ni ruta — no hay User Story que lo respalde, no se inventa.
+
+**Problema real encontrado y corregido de paso**: al arrancar el servidor de desarrollo real por primera vez (antes solo se había hecho `expo export`, que no activa el mismo flujo), Expo Router generó los tipos de rutas (`experiments.typedRoutes`) y `tsc --noEmit` empezó a fallar en `router.replace('/(app)/home')` — la ruta no existe todavía. No es una regresión de esta tarea, solo la primera vez que se disparaba. Corregido con `@ts-expect-error` (fuerza a TS a avisar — "directiva no usada" — en cuanto la ruta exista de verdad, en vez de una `as any` que quedaría olvidada silenciosamente). De paso, `.gitignore`/`tsconfig.json` de `mobile-app` (generados por Expo CLI: `expo-env.d.ts`, `.expo/types/**/*.ts`) añadidos al repo como configuración real. También corregido `pointerEvents` como prop (deprecado en RN Web) → `style.pointerEvents`, en `ParticleField`/`StatusPill`.
+
+**Output generado**: `LoginScreen.tsx`/`.styles.ts` actualizados. `app/_layout.tsx`, `NeuralLoader/index.ts`, `src/components/index.ts` actualizados. `ParticleField.tsx`/`StatusPill.tsx` (fix `pointerEvents`). `apps/mobile-app/.gitignore` (nuevo), `tsconfig.json` actualizado. Sin test automático (UI visual, mismo criterio que el resto de la sesión). `npx turbo run typecheck lint test` → 32/32 en verde. Verificado en navegador real (`http://localhost:8081/login`).
+
+---
+
 ## 2026-08-09 — LoginScreen (US-002): validadores, refactor de RegisterUseCase, pantalla real
 
 **Input**: Red confirmado de `shared-utils`/`LoginScreen.validation.test.ts` (Test Agent, fase previa, misma sesión).

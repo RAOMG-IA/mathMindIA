@@ -25,7 +25,7 @@ export function ParticleField() {
   const travelPx = height * 1.15
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
       {particles.map((particle, index) => (
         <Particle key={index} {...particle} travelPx={travelPx} />
       ))}
