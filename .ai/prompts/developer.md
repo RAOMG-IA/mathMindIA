@@ -3,6 +3,20 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — Implementación de useSessionStore + fetchClient (TDD Green)
+
+**Input**: Red confirmado de `useSessionStore.test.ts`/`fetchClient.test.ts` (Test Agent, fase previa, misma sesión). Primera implementación real de `mobile-app` del proyecto — hasta ahora solo scaffolding/documentación.
+
+**Contexto utilizado**: [ADR-015](../../docs/ADR/ADR-015_mobile_app_screens.md) (diseño de `TokenStorage`/`useSessionStore`/`fetchClient`), `zustand@^4.5.0` (API `create()`), `expo/tsconfig.base` (`moduleResolution: "bundler"` — confirmado que, a diferencia de `backend-api`/`ai-engine`, no hace falta extensión `.js` en imports relativos).
+
+**Decisión tomada**: `TokenStorage.ts` (interfaz, puerto local de `mobile-app` — no vive en `shared-domain`, es un concepto propio del cliente, no del dominio). `useSessionStore.ts` (Zustand): `hydrate`/`login`/`logout` reciben el `TokenStorage` inyectado en vez de importar una implementación concreta, para poder testear con el fake sin depender de un módulo nativo. Persiste `{userId, email, sessionToken}` como un único blob JSON (no solo el token) — necesario porque `email` no vuelve a llegar del backend tras el login (hueco real detectado al implementar, ya anticipado como riesgo menor en ADR-015 pero resuelto aquí de forma concreta). `fetchClient.ts`: `EXPO_PUBLIC_API_BASE_URL` (único prefijo que Expo expone al bundle de cliente) con fallback a `localhost:3000`, cabecera `Authorization` condicionada a que la ruta no esté en `PUBLIC_PATHS`, error lanzado con `body.error` (forma real confirmada en `errorMapping.ts`, no `body.message`).
+
+**Problema real encontrado y corregido de paso**: `tsc --noEmit` fallaba en el test de `fetchClient` — TypeScript infería `fetchMock.mock.calls[0]` como tupla `[]` al no poder inferir la firma de un `vi.fn(async () => ...)` sin parámetros declarados. Corregido tipando explícitamente los parámetros del mock (`_input: RequestInfo | URL, _init?: RequestInit`).
+
+**Output generado**: `apps/mobile-app/src/store/TokenStorage.ts`, `apps/mobile-app/src/store/useSessionStore.ts`, `apps/mobile-app/src/api/fetchClient.ts`, `apps/mobile-app/.env.example` (nuevo, `EXPO_PUBLIC_API_BASE_URL`). READMEs de `src/store`/`src/api` actualizados de "Pendiente de implementar" al estado real. 9/9 tests verdes (`vitest run`), `npx turbo run typecheck lint test` → **31/31 en verde** en todo el monorepo (primera vez que `mobile-app` aporta tests reales al pipeline, antes solo `--passWithNoTests`). Implementaciones concretas de `TokenStorage` (`expo-secure-store`/`localStorage`) y los hooks de TanStack Query de `src/api` quedan pendientes — siguiente paso lógico.
+
+---
+
 ## 2026-08-06 — Implementación de computeNextDifficulty (TDD Green)
 
 **Input**: Confirmación del usuario para implementar `computeNextDifficulty` tras el Red de 8/8 tests fallidos (Test Agent, fase previa). Primera activación del Developer Agent en el proyecto.

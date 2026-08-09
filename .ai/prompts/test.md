@@ -3,6 +3,18 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+## 2026-08-09 — Tests de useSessionStore + fetchClient (TDD Red)
+
+**Input**: "no, comenzamos" — el usuario dio luz verde a implementar lo diseñado en [ADR-015](../../docs/ADR/ADR-015_mobile_app_screens.md), primera pieza real de `mobile-app` de toda la sesión.
+
+**Contexto utilizado**: ADR-015 (persistencia del `sessionToken` vía `TokenStorage` multiplataforma, `fetchClient` con `Authorization: Bearer` salvo `/auth/*`), `apps/backend-api/openapi.yaml` (`LoginResponseDto`/`RegisterResponseDto` solo devuelven `userId`/`sessionToken`, nunca `email`), `errorMapping.ts` (forma real del body de error: `{ error: string }`, no `{ message }`), convención de fakes de `packages/shared-testing` (`InMemory*`) aplicada localmente ya que `TokenStorage` no es un puerto de `shared-domain`.
+
+**Decisión tomada**: 5 tests en `apps/mobile-app/src/store/useSessionStore.test.ts` (arranque sin autenticar, `login` persiste vía `TokenStorage` inyectado, `hydrate` restaura/no restaura sesión, `logout` limpia estado+storage) con un `InMemoryTokenStorage` local. 4 tests en `apps/mobile-app/src/api/fetchClient.test.ts` (`Authorization` presente/ausente según ruta pública, body JSON parseado en éxito, error lanzado con el mensaje real del campo `error`) usando `vi.stubGlobal('fetch', ...)`.
+
+**Output generado**: ambos ficheros de test. Verificado: `vitest run` → **ambos módulos fallan con "Failed to load url ... Does the file exist?"** (los módulos `useSessionStore.ts`/`fetchClient.ts` no existen todavía) — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión, sin pausa — el usuario ya había dado luz verde a todo el ciclo.
+
+---
+
 ## 2026-08-06 — Tests de AdaptiveDifficultyEngine (TDD Red)
 
 **Input**: Confirmado con el usuario que los tests del `AdaptiveDifficultyEngine` trazan a US-004 (AC "el siguiente ejercicio refleja la nueva dificultad calculada") y ADR-005 (fórmulas). Primera activación del Test Agent en el proyecto.
