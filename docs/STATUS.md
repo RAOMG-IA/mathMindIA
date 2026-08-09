@@ -186,3 +186,11 @@ Con el primer ciclo Red→Green completo, el patrón queda establecido para el r
     - **Refactor posterior, misma tarea**: a petición del usuario, los `StyleSheet.create(...)` de `NeuralLoader.tsx`/`StatusPill.tsx`/`LoginScreen.tsx` se extrajeron a ficheros `*.styles.ts` sidecar (React Native no soporta imports de `.css` reales para iOS/Android — se preguntó explícitamente y se descartó esa vía, sin romper Metro/NodeNext).
 
     Verificado con bundle real de web (`expo export --platform web`, montado temporalmente en `app/index.tsx`) antes y después del refactor de estilos. `npx turbo run typecheck lint test` → 32/32 en verde (21/21 tests en `mobile-app`, 9/9 en `shared-utils`, nuevo paquete con código real).
+
+41. ~~Hueco de proceso (recurrente): Security no había revisado LoginScreen/shared-utils~~ ✅ El usuario detectó que la tarea #40 no tenía entrada de Security pese a tocar validación de credenciales — mismo hueco ya señalado una vez antes (#28). Revisión real contra el checklist de la skill (OWASP Top 10, secretos, validación de inputs, dependencias, cumplimiento ADR-012), no un registro de trámite:
+    - Confirmado sin regresión en el mensaje genérico de login (ADR-012 §4/US-002) y sin superficie de inyección nueva (nada derivado de input crudo se renderiza de vuelta).
+    - Sin secretos ni dependencias de terceros nuevas (`MIN_PASSWORD_LENGTH` es política pública, `shared-utils` es interno al monorepo).
+    - **Riesgo real detectado, no introducido por #40 pero relevante por primera vez**: `EXPO_PUBLIC_API_BASE_URL` por defecto es `http://` — es la primera vez que una contraseña real viaja por `fetchClient`; sin HTTPS en producción viajaría en texto claro por la red. Corregido con advertencia explícita en `.env.example`; aplicar HTTPS de verdad queda para DevOps Agent cuando exista despliegue real.
+    - `isValidEmail` acepta dominios con puntos consecutivos (`a@b..com`) — limitación de UX documentada, no hallazgo de seguridad (el backend nunca ha validado formato de email).
+
+    Sin cambios de código más allá del comentario en `.env.example`. Ningún hallazgo crítico.

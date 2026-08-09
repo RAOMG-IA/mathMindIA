@@ -3,6 +3,25 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+## 2026-08-09 — Revisión retroactiva: shared-utils (email/password) + LoginScreen
+
+**Input**: El usuario detectó que Security no había registrado ninguna entrada para la tarea de `LoginScreen`/`shared-utils` ("security no ha escrito accion alguna") pese a tocar validación de credenciales — mismo tipo de hueco de proceso ya detectado una vez en la sesión (STATUS.md #28: Reviewer/Security nunca invocados). Revisión real contra el checklist de esta skill (OWASP Top 10, gestión de secretos, validación de inputs, dependencias, cumplimiento ADR-012), no solo un registro de trámite.
+
+**Contexto utilizado**: `packages/shared-utils/src/index.ts` (`isValidEmail`, `isValidPassword`/`MIN_PASSWORD_LENGTH`), `apps/backend-api/src/application/use-cases/{RegisterUseCase,LoginUseCase}.ts`, `apps/mobile-app/src/screens/{LoginScreen.tsx,LoginScreen.validation.ts}`, `apps/mobile-app/src/api/fetchClient.ts`, [ADR-012](../../docs/ADR/ADR-012_linea_base_seguridad.md) §1/§4.
+
+**Hallazgos**:
+1. **Sin regresión en el mensaje genérico de login** (ADR-012 §4, US-002 AC "sin indicar cuál de los dos datos falló"): confirmado que `LoginScreen` solo muestra `login.error.message` tal cual lo devuelve `LoginUseCase` (`INVALID_CREDENTIALS_MESSAGE`, idéntico para email inexistente y contraseña incorrecta) — los errores de campo (`fieldErrors.email`/`.password`) son puramente de formato/longitud, evaluados en cliente ANTES de cualquier petición de red, por lo que no pueden filtrar si una cuenta existe.
+2. **Sin superficie de inyección nueva**: `email`/`password` viajan como body JSON (`fetchClient`, `JSON.stringify`), nunca concatenados en SQL/HTML/URL. Lo único que se renderiza de vuelta al usuario son cadenas fijas (mensaje genérico del backend, textos de error en español de `validateLoginForm`) — nada derivado de input crudo se refleja en la UI, sin riesgo de XSS reflejado.
+3. **Sin secretos ni dependencias nuevas**: `MIN_PASSWORD_LENGTH=8` es una política pública (OWASP ASVS L1, no sensible). `@mathmind/shared-utils` es un paquete interno del propio monorepo, no una dependencia de terceros — sin superficie de cadena de suministro nueva.
+4. **Riesgo real, no introducido por esta tarea pero ahora relevante por primera vez**: `EXPO_PUBLIC_API_BASE_URL` (`apps/mobile-app/.env.example`) por defecto es `http://localhost:3000` — es la primera vez que una contraseña real viaja por `fetchClient`; en producción, si esa variable no se fija a `https://`, la contraseña circularía en texto claro por la red (riesgo de tráfico, distinto de "nunca en texto plano" de ADR-012 §4, que cubre almacenamiento en BBDD). No es un defecto de código — es configuración de despliegue. Corregido con un comentario de advertencia explícito en `.env.example`; la aplicación real de HTTPS queda para DevOps Agent cuando exista un entorno de despliegue real.
+5. **Limitación de `isValidEmail` documentada, no corregida**: acepta dominios con puntos consecutivos (p. ej. `a@b..com`) — formato técnicamente inválido pero sin impacto de seguridad (es validación de UX en cliente; el backend nunca ha validado formato de email, ni antes ni ahora — solo existencia vía `findByEmail`). No se trata como hallazgo de seguridad, solo como nota de calidad menor.
+
+**Decisión tomada**: sin cambios de código más allá del comentario en `.env.example` — el resto de la superficie revisada ya cumple ADR-012 sin modificaciones. Ningún hallazgo crítico ni secreto detectado.
+
+**Output generado**: `apps/mobile-app/.env.example` actualizado (advertencia HTTPS). Esta entrada.
+
+---
+
 ## 2026-08-05 — ADR-012 Línea Base de Seguridad (sustituye a docs/ADR/Security/)
 
 **Input**: El usuario añadió una sección "Línea base de seguridad" en `.ai/AGENTS.md` y un paquete de 5 ADR (`docs/ADR/Security/`, ADR-007 a ADR-011: aislamiento de secretos, prompt injection, RBAC de agentes, filtrado de contexto, clasificación de datos LLM) pidiendo revisión y feedback.
