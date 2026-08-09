@@ -3,6 +3,18 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+## 2026-08-09 — Tests de las funciones de request de src/api (TDD Red)
+
+**Input**: "genera las clases, hook y abstracciones para tanckstack query" — el usuario pidió construir la capa de `src/api` sobre `fetchClient` (ya implementado), cubriendo las 7 rutas de negocio de `openapi.yaml`.
+
+**Contexto utilizado**: ADR-015 (un hook por ruta), `apps/backend-api/openapi.yaml` y los DTOs reales de `packages/shared-types` (`Auth.ts`, `Session.ts`, `Answer.ts`, `Hint.ts`, `Statistics.ts`) para las firmas exactas, `fetchClient.test.ts` (patrón `vi.stubGlobal('fetch', ...)` ya establecido).
+
+**Decisión tomada**: separar la lógica pura (qué ruta/método/body) de los hooks de React — los hooks (`useMutation`/`useQuery`) no son testeables sin `QueryClientProvider`+`renderHook`, tooling ausente en el monorepo. 7 tests en 5 ficheros (`requests/{auth,session,answer,hint}.test.ts` con 2/2/1/1, `statistics.test.ts` con 1) verificando ruta, método y body serializado de cada función `*Request(dto)`.
+
+**Output generado**: los 5 ficheros de test. Verificado: `vitest run` → **los 5 módulos fallan con "Failed to load url ... Does the file exist?"** — Red confirmado por la razón correcta (funciones no implementadas todavía). Implementación (Developer Agent, Green) en la misma sesión.
+
+---
+
 ## 2026-08-09 — Tests de useSessionStore + fetchClient (TDD Red)
 
 **Input**: "no, comenzamos" — el usuario dio luz verde a implementar lo diseñado en [ADR-015](../../docs/ADR/ADR-015_mobile_app_screens.md), primera pieza real de `mobile-app` de toda la sesión.

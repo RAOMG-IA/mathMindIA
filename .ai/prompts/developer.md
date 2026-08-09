@@ -3,6 +3,18 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — src/api completo: requests + hooks de TanStack Query (TDD Green + wiring)
+
+**Input**: Red confirmado de los 7 tests de `requests/*.test.ts` (Test Agent, fase previa, misma sesión).
+
+**Contexto utilizado**: `fetchClient.ts` (ya implementado, reutilizado tal cual por todas las funciones de request), `useSessionStore.ts`/`createTokenStorage.ts` (para el `onSuccess` de login/registro), `@tanstack/react-query@^5.56.0` (API `useMutation`/`useQuery` de v5, ya en `package.json`).
+
+**Decisión tomada**: `requests/{auth,session,answer,hint,statistics}.ts` — funciones puras `*Request(dto)`, una por ruta, todas delegando en `fetchClient`. `hooks/{useAuth,useSession,useAnswer,useHint,useStatistics}.ts` — un hook por función de `requests/`, wiring sin test (mismo criterio que `routes.ts`/`main.ts`). `useRegister`/`useLogin` llaman a `useSessionStore.getState().login(...)` en `onSuccess`, combinando `response.userId`/`response.sessionToken` con `variables.email` (la petición que el usuario acaba de enviar) — el backend no devuelve el email. `useUserStatistics` expone una `queryKey` compartida (`queryKeys.ts`) para que el header global y `(app)/statistics` (ambos previstos en ADR-015, todavía sin construir) reutilicen la misma caché. `/health` deliberadamente sin hook — ninguna pantalla lo consume.
+
+**Output generado**: 5 ficheros en `src/api/requests/`, 5 en `src/api/hooks/`, `src/api/queryKeys.ts`, `src/api/index.ts` (barrel). README de `src/api` actualizado. 7/7 tests verdes (los ya confirmados en Red), `npx turbo run typecheck lint test` → 31/31 en verde en todo el monorepo (16/16 tests en `mobile-app`, antes 9). Pendiente: componer estos hooks dentro de pantallas reales (`src/screens`) y `app/`, todavía scaffolding.
+
+---
+
 ## 2026-08-09 — Implementaciones reales de TokenStorage
 
 **Input**: "implementa TokenStorage" — el usuario pidió cerrar el hueco que la entrada anterior dejaba explícito (puerto + fake de test, sin implementaciones reales).
