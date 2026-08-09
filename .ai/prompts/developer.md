@@ -3,6 +3,20 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — Componente `NeuralLoader` (UI pura, sin ciclo TDD)
+
+**Input**: "implementa el componente" — tras dos rondas de iteración visual sobre un prototipo HTML/CSS/SVG publicado como Artifact (spec de diseño exacta aportada por el usuario; corrección de geometría del cráneo/cerebro; integración del SVG real de cráneo/cerebro aportado por el usuario), el usuario aprobó el diseño y pidió el componente React Native real.
+
+**Contexto utilizado**: el propio prototipo HTML validado (colores, timings de animación, posiciones de zonas/símbolos/anillos en % del contenedor); el SVG de cráneo/cerebro del usuario, con su bounding box calculado mediante un script Node (`bbox.mjs`, parseo de comandos M/C/L/Z relativos) para recortar el `viewBox` con precisión; `docs/ADR/ADR-015_mobile_app_screens.md` (target de despliegue Android/iOS/Web, ya condicionaba que cualquier pieza visual funcione en los tres).
+
+**Decisión tomada**: `react-native-svg` para el trazado (paths copiados tal cual del SVG del usuario en `anatomyPaths.ts`, sin reinterpretarlos) + gradientes; `react-native-reanimated` para las animaciones (`useSharedValue`/`useAnimatedStyle`/`useAnimatedProps`/`interpolate`, sustituyendo los `@keyframes` de CSS -- cada keyframe multi-parada se modela como un valor `progress` animado e `interpolate`, no un salto discreto entre etapas); `expo-blur` para el blur del status pill. Tres adaptaciones donde RN no tiene equivalente CSS directo, documentadas en `src/components/README.md`: `filter:blur()` de las zonas → `RadialGradient` de SVG, `backdrop-filter:blur()` → `expo-blur` con fallback web, parpadeo de cursor `step-end` → fundido rápido.
+
+**Problema real encontrado y corregido de paso**: `react-native-web`/`react-dom` no estaban instalados -- `npx expo export --platform web` fallaba de inmediato con "missing web dependencies". No era solo un bloqueo de esta tarea: sin ellos, el target Web que ADR-015 fija como parte del despliegue (Android+iOS+Web) no funcionaba en absoluto. Instalados vía `npx expo install`.
+
+**Output generado**: `apps/mobile-app/src/components/NeuralLoader/` (10 ficheros: `anatomyPaths.ts`, `constants.ts`, `HeadAnatomy.tsx`, `ActivityZone.tsx`, `EmergingSymbol.tsx`, `ScanRing.tsx`, `BackgroundGrid.tsx`, `Particle.tsx`, `ParticleField.tsx`, `StatusPill.tsx`, `NeuralLoader.tsx`, `index.ts`), `src/components/index.ts` (barrel nuevo), `babel.config.js` actualizado (`react-native-reanimated/plugin`). Sin test automático -- UI puramente visual/de animación, mismo criterio que `SecureStoreTokenStorage`/`WebTokenStorage`. Verificado con `tsc --noEmit`/`eslint` en verde y un bundle real de web (`npx expo export --platform web`, montado temporalmente en `app/index.tsx` y revertido) sin errores de import/runtime -- 1147 módulos. `npx turbo run typecheck lint test` → 31/31 en verde. iOS/Android sin verificar (sin simulador disponible), gap aceptado explícitamente.
+
+---
+
 ## 2026-08-09 — invalidateStatisticsOnSessionStart (TDD Green) + wiring en useStartSession
 
 **Input**: Red confirmado de `useSession.test.ts` (Test Agent, fase previa, misma sesión).
