@@ -3,6 +3,18 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — invalidateStatisticsOnSessionStart (TDD Green) + wiring en useStartSession
+
+**Input**: Red confirmado de `useSession.test.ts` (Test Agent, fase previa, misma sesión).
+
+**Contexto utilizado**: `useSession.ts` (fase anterior, `useStartSession`/`useEndSession` ya existentes), `useQueryClient()` de `@tanstack/react-query` (hook que expone la instancia real del `QueryClient` del árbol de componentes).
+
+**Decisión tomada**: `invalidateStatisticsOnSessionStart(queryClient)` como función exportada aparte de `useStartSession` — recibe el `QueryClient` en vez de leerlo de un hook, precisamente para poder testearla sin `QueryClientProvider`. `useStartSession` la invoca en `onSuccess`, pasándole el resultado de `useQueryClient()`. Sin comparar `mode`/`academicLevel` contra el valor anterior — invalidación incondicional en cada inicio de sesión, judgment call documentado (más simple y más seguro que llevar el rastro de si realmente cambió).
+
+**Output generado**: `apps/mobile-app/src/api/hooks/useSession.ts` actualizado. README de `src/api` actualizado. 1/1 test verde (el ya confirmado en Red), `npx turbo run typecheck lint test` → 31/31 en verde (17/17 tests en `mobile-app`, antes 16).
+
+---
+
 ## 2026-08-09 — src/api completo: requests + hooks de TanStack Query (TDD Green + wiring)
 
 **Input**: Red confirmado de los 7 tests de `requests/*.test.ts` (Test Agent, fase previa, misma sesión).

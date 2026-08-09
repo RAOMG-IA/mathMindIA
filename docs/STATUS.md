@@ -162,3 +162,8 @@ Con el primer ciclo Red→Green completo, el patrón queda establecido para el r
     - **`queryKeys.ts`**: `useUserStatistics` usa una `queryKey` compartida para que el header global de `(app)` y `(app)/statistics` (ambos previstos en ADR-015) reutilicen la misma caché en vez de duplicar la petición.
 
     `npx turbo run typecheck lint test` → 31/31 en verde (16/16 tests de `mobile-app`, antes 9). Con esto, `src/api` queda completo salvo la composición real en pantallas (siguiente paso lógico junto con `src/screens`).
+
+38. ~~Invalidación de caché al cambiar de nivel/modo (`invalidateQueries`)~~ ✅ (TDD Red→Green) El usuario pidió que la caché de TanStack Query se limpie cuando el usuario cambia de nivel académico o de modo de juego. Único punto real donde eso ocurre: `StartSessionRequestDto` (US-003, `useStartSession`) — no hay ninguna otra mutación que toque `mode`/`academicLevel`. `useStartSession` invalida `queryKeys.statistics` en `onSuccess`, sin comparar contra el valor anterior (judgment call: arrancar sesión ya es el único disparador, y volver a pedir el dato es más simple y más seguro que llevar la cuenta de si realmente cambió).
+    - **Hueco de testabilidad resuelto, no aceptado como gap**: a diferencia del resto de `hooks/` (sin test, requieren `QueryClientProvider`+`renderHook`), la propia invalidación sí se pudo extraer y testear — `QueryClient` es una clase plana de `@tanstack/query-core`, instanciable y espiable (`vi.spyOn`) sin renderizar ningún componente React. `invalidateStatisticsOnSessionStart(queryClient)` queda como función standalone, testeada aparte del hook que la invoca.
+
+    1/1 test nuevo (`useSession.test.ts`), `npx turbo run typecheck lint test` → 31/31 en verde (17/17 tests de `mobile-app`, antes 16).

@@ -3,6 +3,18 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+## 2026-08-09 — Test de invalidateStatisticsOnSessionStart (TDD Red)
+
+**Input**: "implementa la funcionalida de tankstack invalidateQueries para limpiar la cache cuando el usuario cambie de nivel o cambie el modo de juego".
+
+**Contexto utilizado**: `StartSessionRequestDto` (único DTO que lleva `mode`/`academicLevel`, `packages/shared-types/src/dtos/Session.ts`) — confirma que `useStartSession` es el único punto donde ese cambio ocurre. `queryKeys.ts` (la key de `statistics` ya centralizada, fase anterior).
+
+**Decisión tomada**: a diferencia del resto de hooks de `src/api` (sin test, ver entradas previas), la propia llamada a `invalidateQueries` sí es testeable si se extrae de `useStartSession` como función standalone que recibe un `QueryClient` — es una clase plana de `@tanstack/query-core`, instanciable y espiable con `vi.spyOn` sin renderizar React. 1 test en `useSession.test.ts` verificando que `invalidateStatisticsOnSessionStart(queryClient)` llama a `queryClient.invalidateQueries({queryKey: queryKeys.statistics})`.
+
+**Output generado**: `apps/mobile-app/src/api/hooks/useSession.test.ts`. Verificado: `vitest run` → **falla con `TypeError: invalidateStatisticsOnSessionStart is not a function`** — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión.
+
+---
+
 ## 2026-08-09 — Tests de las funciones de request de src/api (TDD Red)
 
 **Input**: "genera las clases, hook y abstracciones para tanckstack query" — el usuario pidió construir la capa de `src/api` sobre `fetchClient` (ya implementado), cubriendo las 7 rutas de negocio de `openapi.yaml`.
