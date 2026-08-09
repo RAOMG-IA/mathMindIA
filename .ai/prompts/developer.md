@@ -3,6 +3,18 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-09 — Implementaciones reales de TokenStorage
+
+**Input**: "implementa TokenStorage" — el usuario pidió cerrar el hueco que la entrada anterior dejaba explícito (puerto + fake de test, sin implementaciones reales).
+
+**Contexto utilizado**: [ADR-015](../../docs/ADR/ADR-015_mobile_app_screens.md) (decisión: `expo-secure-store` en nativo, `localStorage` en web, seleccionado por `Platform.OS`), `TokenStorage.ts` (puerto ya definido, fase anterior), criterio ya establecido en la sesión para adaptadores que tocan un recurso real no disponible bajo el test runner (`LangChainChatModel`, `XenovaEmbedder`).
+
+**Decisión tomada**: sin tests nuevos — ninguna de las tres piezas es testeable bajo Vitest/node (módulo nativo de Expo, `window`/DOM, resolución de `react-native` vía Metro). `SecureStoreTokenStorage` envuelve `getItemAsync`/`setItemAsync`/`deleteItemAsync`. `WebTokenStorage` envuelve `window.localStorage`. `createTokenStorage()` es la única pieza de wiring — mismo tratamiento que `main.ts` (sin test, wiring puro).
+
+**Output generado**: `expo-secure-store` instalado (`npm install --workspace=apps/mobile-app`, resuelto a `^57.0.1`). `SecureStoreTokenStorage.ts`, `WebTokenStorage.ts`, `createTokenStorage.ts`. README de `src/store` actualizado. `npx turbo run typecheck lint test` → 31/31 en verde (9/9 tests existentes sin cambios, nada nuevo que testear).
+
+---
+
 ## 2026-08-09 — Implementación de useSessionStore + fetchClient (TDD Green)
 
 **Input**: Red confirmado de `useSessionStore.test.ts`/`fetchClient.test.ts` (Test Agent, fase previa, misma sesión). Primera implementación real de `mobile-app` del proyecto — hasta ahora solo scaffolding/documentación.
