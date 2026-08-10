@@ -3,6 +3,20 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-10 — `app/(app)/_layout.tsx`: guard de autenticación + header global (TDD Red→Green)
+
+**Input**: el usuario pidió continuar con la siguiente pantalla de `mobile-app`; consultado por `AskUserQuestion` sobre cuál construir primero de las cuatro restantes (Home/Ejercicio/Resumen/Estadísticas), eligió el guard/header de `(app)` por ser prerrequisito de las cuatro (ADR-015).
+
+**Contexto utilizado**: `docs/ADR/ADR-015_mobile_app_screens.md` (diseño ya fijado del guard + header global), `useSessionStore.ts`/`createTokenStorage.ts` (ya implementados desde #35/#36, `hydrate()` sin cablear todavía), `useUserStatistics` (ya implementado desde #37, con `queryKeys.statistics` pensada para compartirse).
+
+**Decisión tomada**: `resolveSessionRoute` (`src/store/sessionRouting.ts`) como función pura única, reutilizada por el guard y por `app/index.tsx` — evita repetir el `if/else` de `isHydrated`/`sessionToken` en dos sitios y modela explícitamente el estado `'loading'` (sin el cual un usuario con sesión válida vería un salto visual a login mientras la persistencia responde). `AppHeader` sin test (presentacional puro), reutilizando `useUserStatistics` con la misma query key que usará `(app)/statistics` — sin endpoint nuevo, tal como fija ADR-015.
+
+**Hueco real detectado, no solo lo pedido**: `useSessionStore.hydrate()` llevaba implementada desde #35 pero nunca se había invocado desde ningún componente — sin cablearla, `isHydrated` se habría quedado `false` para siempre y el guard nuevo habría redirigido a login incluso con un `sessionToken` persistido válido. Cableada en `app/_layout.tsx` (`useEffect`, una sola vez al montar `RootLayout`) porque tanto el guard como `app/index.tsx` dependen de ese estado.
+
+**Output generado**: `src/store/sessionRouting.ts`+`.test.ts` (nuevo), `src/components/AppHeader/{AppHeader.tsx,AppHeader.styles.ts,index.ts}` (nuevo), `src/components/index.ts` actualizado, `app/_layout.tsx` (hidratación cableada), `app/(app)/_layout.tsx` (nuevo), `app/index.tsx` (deja de ser placeholder). 3/3 tests nuevos, `npx turbo run typecheck lint test` → 32/32 en verde (29/29 tests en `mobile-app`, antes 26). Verificado con bundle real (`expo start --web`, 1263 módulos, sin errores) y `curl` 200 en `/`, `/login`, `/register`.
+
+---
+
 ## 2026-08-09 — `EmailInput`/`PasswordInput`: componentes de input compartidos, sustituidos en Login/Register
 
 **Input**: el usuario pidió un componente de `TextInput` personalizado reutilizable con dos variantes — email (validación de formato, opcionalmente "existencia" para registro) y contraseña (icono de "ojo" que revela el valor en hover/pulsación mantenida) — y sustituirlos en ambas pantallas ya existentes.

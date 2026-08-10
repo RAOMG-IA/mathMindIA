@@ -3,6 +3,25 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+## 2026-08-10 — Revisión: `app/(app)/_layout.tsx` (guard + header global)
+
+**Input**: el usuario pidió comprobar que la validación de Security de la tarea del guard/header (STATUS.md #45) es correcta antes de comitear — Security no se había ejecutado todavía para esa tarea. Revisión real contra el checklist de esta skill, no un registro de trámite.
+
+**Contexto utilizado**: `apps/mobile-app/src/store/sessionRouting.ts`, `apps/mobile-app/app/(app)/_layout.tsx`, `apps/mobile-app/app/index.tsx`, `apps/mobile-app/app/_layout.tsx`, `apps/mobile-app/src/components/AppHeader/AppHeader.tsx`, `apps/mobile-app/src/api/fetchClient.ts`, ADR-012, ADR-015 (persistencia del `sessionToken`).
+
+**Hallazgos**:
+1. **Sin hallazgos de OWASP Top 10 en la superficie nueva**: el guard (`resolveSessionRoute`) es una decisión puramente de UX cliente — no es el límite de autorización real, que sigue siendo `authMiddleware` en `backend-api` (verifica el `Bearer` en cada petición, IDOR ya cubierto por la verificación de `session.userId` corregida en #Security 2026-08-07). Un atacante que se salte el guard cliente (DevTools, build modificado) no gana nada: cualquier llamada a la API seguiría exigiendo un token válido server-side. `AppHeader` solo lee `email`/`sessionToken` del propio `useSessionStore` (nunca los expone en la UI más allá del email, ya visible para el propio usuario) — sin fuga a logs ni a terceros.
+2. **Sin secretos ni dependencias nuevas**: ningún literal sensible en el código añadido; no se instaló ninguna dependencia en esta tarea (`package.json` sin cambios).
+3. **Validación de inputs**: no aplica — esta pieza no procesa ningún input de usuario (es routing/chrome, no un formulario).
+4. **Cumplimiento ADR-012**: sin regresión — la persistencia del token sigue igual que ADR-015 la fijó (`expo-secure-store`/`localStorage`, riesgo de `localStorage` ya documentado y aceptado, no reabierto aquí).
+5. **Hallazgo real, no bloqueante — sesión no se limpia ante un `sessionToken` caducado/revocado**: `fetchClient.ts` lanza un `Error` genérico ante cualquier respuesta `!response.ok` (incluido 401), pero nada captura ese caso para invalidar `useSessionStore` — antes de esta tarea no había ningún guard que dependiera de "hay token", así que el problema no era observable; ahora que `(app)/_layout.tsx` trata "hay `sessionToken`" como "autenticado", un token caducado deja al usuario dentro de las pantallas protegidas viendo errores de query en vez de ser devuelto a login. No es una vulnerabilidad de acceso no autorizado (el servidor sigue rechazando la petición igualmente), es un hueco de gestión de sesión/UX. **No corregido en esta tarea** — cambia el contrato de `fetchClient` (necesitaría un interceptor de 401 que llame a `useSessionStore.logout()`), fuera del alcance pedido ("verifica Security y comitea"); queda señalado aquí como siguiente hallazgo a resolver, mismo criterio que el resto de huecos documentados y diferidos de la sesión (p. ej. HTTPS en `.env.example`, 2026-08-09).
+
+**Decisión tomada**: sin cambios de código — ningún hallazgo crítico ni bloqueante. El hallazgo #5 queda registrado para una tarea futura (interceptor de 401 en `fetchClient` + `logout()`), no bloquea el commit de #45.
+
+**Output generado**: esta entrada.
+
+---
+
 ## 2026-08-09 — Revisión retroactiva: shared-utils (email/password) + LoginScreen
 
 **Input**: El usuario detectó que Security no había registrado ninguna entrada para la tarea de `LoginScreen`/`shared-utils` ("security no ha escrito accion alguna") pese a tocar validación de credenciales — mismo tipo de hueco de proceso ya detectado una vez en la sesión (STATUS.md #28: Reviewer/Security nunca invocados). Revisión real contra el checklist de esta skill (OWASP Top 10, gestión de secretos, validación de inputs, dependencias, cumplimiento ADR-012), no solo un registro de trámite.

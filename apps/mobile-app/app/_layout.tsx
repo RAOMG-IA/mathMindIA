@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { createTokenStorage } from '../src/store/createTokenStorage'
+import { useSessionStore } from '../src/store/useSessionStore'
 
 // Hueco real detectado al montar la primera pantalla que consume src/api (LoginScreen):
 // ningun hook de TanStack Query es utilizable sin un QueryClientProvider en el arbol -- no
@@ -14,6 +16,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 // para el boton "Registrarse" en la esquina superior derecha de LoginScreen.
 export default function RootLayout() {
   const [queryClient] = useState(() => new QueryClient())
+
+  // Hidrata la sesion persistida (ADR-015: expo-secure-store/localStorage segun plataforma)
+  // una sola vez al arrancar. Aqui y no en (app)/_layout.tsx ni en index.tsx porque ambos
+  // dependen de isHydrated -- un unico punto de partida evita repetir el efecto en los dos.
+  useEffect(() => {
+    void useSessionStore.getState().hydrate(createTokenStorage())
+  }, [])
 
   return (
     <SafeAreaProvider>
