@@ -22,6 +22,8 @@ tags:
     description: Solicitar pistas en Modo Resolución (UC-003).
   - name: Statistics
     description: Estadísticas del usuario autenticado (UC-007).
+  - name: Temas
+    description: Catálogo de Temas (ADR-006), usado por el selector de US-003.
   - name: Health
     description: Comprobación de disponibilidad del servidor.
 
@@ -276,6 +278,54 @@ components:
           items:
             $ref: "#/components/schemas/TopicStatDto"
 
+    TemaAcademicLevelRangeDto:
+      type: object
+      required: [level, difficultyRange]
+      properties:
+        level:
+          $ref: "#/components/schemas/AcademicLevel"
+        difficultyRange:
+          type: object
+          required: [min, max]
+          properties:
+            min:
+              type: number
+            max:
+              type: number
+
+    TemaDto:
+      type: object
+      description: Un Tema del catálogo (ADR-006). area/code estables, usados por Exercise.topic.
+      required: [code, area, label, description, academicLevels]
+      properties:
+        code:
+          type: string
+          example: "arit.suma-resta"
+        area:
+          type: string
+          enum: [arit, alg, geo, est, calc]
+        label:
+          type: string
+        description:
+          type: string
+        academicLevels:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemaAcademicLevelRangeDto"
+        prerequisites:
+          type: array
+          items:
+            type: string
+
+    GetTemasResponseDto:
+      type: object
+      required: [temas]
+      properties:
+        temas:
+          type: array
+          items:
+            $ref: "#/components/schemas/TemaDto"
+
   responses:
     Unauthorized:
       description: >
@@ -474,5 +524,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GetUserStatisticsResponseDto"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /temas:
+    get:
+      tags: [Temas]
+      summary: Catálogo completo de Temas (ADR-006 adenda 2026-08-10)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Catálogo completo, sin filtrar por AcademicLevel (el cliente filtra localmente)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetTemasResponseDto"
         "401":
           $ref: "#/components/responses/Unauthorized"

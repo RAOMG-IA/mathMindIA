@@ -149,3 +149,17 @@ Conjunto **representativo, no exhaustivo** — se amplía con uso real. Todos lo
 ## Trazabilidad
 
 Registrado en `.ai/prompts/architecture.md`.
+
+---
+
+## Adenda 2026-08-10: exposición del catálogo vía API (`GET /temas`)
+
+**Contexto**: al diseñar `(app)/home.tsx` (US-003, [ADR-015](ADR-015_mobile_app_screens.md)) se detectó que ningún endpoint permite a `mobile-app` obtener el catálogo de Temas para construir el selector — `TemaRepository` (puerto de dominio) solo exponía `findByCode`, sin forma de listar, y el seed real de `main.ts` era deliberadamente mínimo ("no es el catálogo real de ADR-006"), no el catálogo de 23 Temas fijado en este documento. Sin resolver esto, `(app)/home.tsx` no puede construirse: US-003 exige elegir un Tema real, no inventado en cliente.
+
+**Decisión**: se añade `findAll(): Promise<readonly Tema[]>` a `TemaRepository` (sigue sin `save` — el catálogo se sigue poblando por seed, no por la Application layer, sin cambio respecto a la decisión original de este ADR). Nuevo `ListTemasUseCase` (Application) + `TemaController`/`GET /temas` (Presentation), protegido con el mismo `Bearer` que el resto de rutas autenticadas (dato de referencia, no sensible, pero se mantiene la coherencia con el resto del contrato en vez de abrir una excepción pública nueva). Sin filtrado server-side por `AcademicLevel`: devuelve el catálogo completo — cada `Tema` ya lleva su propio array `academicLevels`, así que el cliente filtra localmente sin necesitar un query param nuevo.
+
+**Seed real**: `main.ts` sustituye el seed mínimo (1 Tema) por los 23 Temas de la sección "Catálogo inicial" de este mismo documento, transcritos tal cual (mismos `code`/`label`/`academicLevels`/`prerequisites`) — cierra la advertencia que el propio comentario de `main.ts` señalaba desde que se conectó Prisma.
+
+**Por qué no una migración a Postgres**: `TemaRepository` sigue en memoria a propósito (ver decisión original de este ADR, "no es un agregado mutable desde la Application layer") — el catálogo es código/seed, no un dato mutable por el usuario. Esto no cambia con la adenda; solo se completa el seed que faltaba.
+
+Registrado también en `ARCHITECTURE.md` ("API REST (Rutas)") y `apps/backend-api/openapi.yaml`.

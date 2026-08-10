@@ -1,14 +1,17 @@
 import 'dotenv/config'
 import express from 'express'
+import cors from 'cors'
 import { InMemoryHintUsageTracker, InMemoryTemaRepository } from '@mathmind/shared-testing'
 import { LangChainChatModel, QwenClient } from '@mathmind/ai-engine'
 import type { ExerciseId } from '@mathmind/shared-domain'
 import { createRoutes } from './http/routes.js'
+import { isOriginAllowed, parseAllowedOrigins } from './http/corsConfig.js'
 import { AuthController } from './http/AuthController.js'
 import { SessionController } from './http/SessionController.js'
 import { AnswerController } from './http/AnswerController.js'
 import { HintController } from './http/HintController.js'
 import { StatisticsController } from './http/StatisticsController.js'
+import { TemaController } from './http/TemaController.js'
 import { BcryptPasswordHasher } from '../infrastructure/auth/BcryptPasswordHasher.js'
 import { JwtTokenIssuer } from '../infrastructure/auth/JwtTokenIssuer.js'
 import { QwenHintGenerator } from '../infrastructure/ai/QwenHintGenerator.js'
@@ -30,6 +33,8 @@ import { UpdateDifficultyUseCase } from '../application/use-cases/UpdateDifficul
 import { GenerateHintUseCase } from '../application/use-cases/GenerateHintUseCase.js'
 import { GetUserStatisticsUseCase } from '../application/use-cases/GetUserStatisticsUseCase.js'
 import { SelectNextExerciseUseCase } from '../application/use-cases/SelectNextExerciseUseCase.js'
+import { ListTemasUseCase } from '../application/use-cases/ListTemasUseCase.js'
+import { TEMA_CATALOG } from '../infrastructure/seed/temaCatalog.js'
 
 // Composicion (wiring puro, sin logica propia -- ver routes.ts). Repositorios reales sobre
 // Postgres (Prisma) para User/Session/Answer/Hint/Exercise/UserCredentials -- ver
@@ -43,6 +48,14 @@ if (!JWT_SECRET) {
 const DATABASE_URL = process.env.DATABASE_URL
 if (!DATABASE_URL) {
   throw new Error('DATABASE_URL is required (see .env.example)')
+}
+
+// Allowlist explicita de origenes externos (CORS_ALLOWED_ORIGINS) -- sin ella, ningun origin de
+// navegador pasa (isOriginAllowed rechaza por defecto, ver corsConfig.ts). No afecta a clientes
+// sin cabecera Origin (apps nativas iOS/Android, curl, servidor a servidor).
+const ALLOWED_ORIGINS = parseAllowedOrigins(process.env.CORS_ALLOWED_ORIGINS)
+if (ALLOWED_ORIGINS.length === 0) {
+  console.warn('CORS_ALLOWED_ORIGINS is not set -- no browser origin will be allowed (see .env.example)')
 }
 
 // Nombres de variable deliberadamente genericos (no "QWEN_*") -- LangChainChatModel envuelve
@@ -62,21 +75,12 @@ const answers = new PrismaAnswerRepository(prisma)
 const hints = new PrismaHintRepository(prisma)
 const hintUsage = new InMemoryHintUsageTracker()
 
-// Seed minimo para poder arrancar y probar manualmente (no es el catalogo real de ADR-006 --
-// eso requiere la migracion/seed real de Infrastructure, todavia sin hacer). Sin esto,
-// POST /sessions falla siempre (ningun Tema existe). El Tema sigue en memoria (ver comentario
-// de arriba); el Exercise si es persistido de verdad -- se espera (await, no fire-and-forget)
-// porque ahora es una escritura real a red/DB, no una Map sincrona (hallazgo de Reviewer sobre
-// el `void` original, ver STATUS.md).
-const temas = new InMemoryTemaRepository([
-  {
-    code: 'arit.suma-resta',
-    area: 'arit',
-    label: 'Suma y resta',
-    description: 'Operaciones basicas de suma y resta mental',
-    academicLevels: [{ level: 'Primaria', difficultyRange: { min: 500, max: 750 } }],
-  },
-])
+// Catalogo real de ADR-006 (23 Temas, ver infrastructure/seed/temaCatalog.ts) -- sustituye al
+// seed minimo de 1 Tema que vivia aqui antes (ADR-006 adenda 2026-08-10, GET /temas). El Tema
+// sigue en memoria (ver comentario de arriba); el Exercise si es persistido de verdad -- se
+// espera (await, no fire-and-forget) porque ahora es una escritura real a red/DB, no una Map
+// sincrona (hallazgo de Reviewer sobre el `void` original, ver STATUS.md).
+const temas = new InMemoryTemaRepository(TEMA_CATALOG)
 // Id fijo (no crypto.randomUUID()): save() es upsert, un id estable hace que reiniciar el
 // servidor actualice esta misma fila en vez de acumular un Exercise duplicado en cada arranque
 // (hueco detectado al conectar este seed a persistencia real -- con InMemory no importaba,
@@ -160,11 +164,19 @@ const controllers = {
     ),
   ),
   statistics: new StatisticsController(new GetUserStatisticsUseCase(users, answers, exercises, temas)),
+  tema: new TemaController(new ListTemasUseCase(temas)),
 }
 
 const app = express()
 const PORT = process.env.PORT ?? 3000
 
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin, ALLOWED_ORIGINS))
+    },
+  }),
+)
 app.use(express.json())
 
 app.get('/health', (_req, res) => {

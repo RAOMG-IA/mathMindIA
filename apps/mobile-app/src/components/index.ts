@@ -1,3 +1,7 @@
 export { NeuralLoader, BackgroundGrid, ParticleField, COLORS } from './NeuralLoader'
 export { EmailInput, PasswordInput } from './inputs'
 export { AppHeader } from './AppHeader'
+export { AcademicLevelStars } from './AcademicLevelStars'
+export { Checkbox } from './Checkbox'
+export { Combobox } from './Combobox'
+export type { ComboboxProps } from './Combobox'

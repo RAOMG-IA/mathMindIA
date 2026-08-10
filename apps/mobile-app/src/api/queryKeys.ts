@@ -3,4 +3,5 @@
 // cache exacta solo si usan la misma key en vez de repetirla como literal en cada sitio.
 export const queryKeys = {
   statistics: ['statistics'] as const,
+  temas: ['temas'] as const,
 }

@@ -5,6 +5,7 @@ import type { SessionController } from './SessionController.js'
 import type { AnswerController } from './AnswerController.js'
 import type { HintController } from './HintController.js'
 import type { StatisticsController } from './StatisticsController.js'
+import type { TemaController } from './TemaController.js'
 import type { AuthenticatedRequest } from './middleware/authMiddleware.js'
 import { createAuthMiddleware } from './middleware/authMiddleware.js'
 import { mapUseCaseError } from './errorMapping.js'
@@ -27,6 +28,7 @@ export interface Controllers {
   readonly answer: AnswerController
   readonly hint: HintController
   readonly statistics: StatisticsController
+  readonly tema: TemaController
 }
 
 export function createRoutes(controllers: Controllers, tokenIssuer: TokenIssuer): Router {
@@ -88,6 +90,14 @@ export function createRoutes(controllers: Controllers, tokenIssuer: TokenIssuer)
   router.get('/users/me/statistics', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       res.json(await controllers.statistics.getStatistics(req.userId as string))
+    } catch (error) {
+      handleError(res, error, true)
+    }
+  })
+
+  router.get('/temas', requireAuth, async (_req: AuthenticatedRequest, res) => {
+    try {
+      res.json(await controllers.tema.listTemas())
     } catch (error) {
       handleError(res, error, true)
     }

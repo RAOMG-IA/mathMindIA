@@ -74,3 +74,17 @@ Esta es la regla que respalda la "Línea base de seguridad" de `AGENTS.md`, dist
 ## Trazabilidad
 
 Registrado en `.ai/prompts/security.md`.
+
+---
+
+## Adenda 2026-08-10: CORS (`CORS_ALLOWED_ORIGINS`)
+
+**Contexto**: al verificar `mobile-app` en un navegador (Expo Web servido en `http://localhost:8081`) contra `backend-api` real (`http://localhost:3000`), el registro falló por CORS — `backend-api` no enviaba ninguna cabecera `Access-Control-Allow-*`, así que cualquier origen de navegador, incluido el propio `mobile-app`, quedaba bloqueado por defecto (comportamiento estándar del navegador sin CORS explícito, no un bug). El usuario pidió resolverlo con una allowlist configurable por entorno, explícito en que la privacidad no debía verse afectada (es decir: nada de `Access-Control-Allow-Origin: *`).
+
+**Decisión**: nueva variable `CORS_ALLOWED_ORIGINS` (lista de orígenes separados por comas, sin wildcard). `isOriginAllowed()`/`parseAllowedOrigins()` (`apps/backend-api/src/presentation/http/corsConfig.ts`, TDD) rechazan por defecto — una variable sin definir o vacía bloquea **todo** origen de navegador, en vez de degradar a permisivo por error de configuración. Las peticiones sin cabecera `Origin` (apps nativas iOS/Android, `curl`, servidor-a-servidor) no se ven afectadas — CORS es un mecanismo que solo aplican los navegadores, y `mobile-app` en nativo (ADR-015, objetivo Android+iOS+Web) nunca envía esa cabecera.
+
+Mismo tratamiento que el resto de configuración de red ya cubierta por esta línea base (§1, "todo secreto vive únicamente en variables de entorno"): aunque una lista de orígenes no es un secreto en sí, es configuración sensible de superficie de ataque, y sigue el mismo canal (`.env`/`.env.example`, nunca hardcodeada).
+
+**Consecuencias**: cualquier despliegue nuevo (staging, producción, un origen web adicional) debe añadirse explícitamente a `CORS_ALLOWED_ORIGINS` — no hay auto-detección ni entorno de desarrollo permisivo por defecto. Documentado en `apps/backend-api/.env.example`.
+
+Registrado también en `.ai/prompts/{architecture,developer,security}.md`.

@@ -3,6 +3,26 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 
 ---
 
+## 2026-08-10 — Adenda ADR-012: CORS (`CORS_ALLOWED_ORIGINS`)
+
+**Input**: el usuario reportó que el registro fallaba por CORS al probar `mobile-app` (Expo Web, `:8081`) contra `backend-api` real (`:3000`) — orígenes distintos, sin ninguna cabecera CORS en las respuestas del backend. Pidió una allowlist configurable por `.env`, explícito en no comprometer la privacidad (sin wildcard).
+
+**Decisión tomada**: nueva variable `CORS_ALLOWED_ORIGINS` (lista separada por comas), rechazo por defecto si no está definida — no un "permitir todo" de desarrollo. Tratada como configuración de red sensible bajo la misma disciplina de `.env`/`.env.example` que el resto de la línea base de seguridad (ADR-012 §1), no como una decisión nueva de autenticación/autorización (el `Bearer` sigue siendo el único control de acceso real). Adenda añadida a ADR-012 en vez de un ADR nuevo — es una extensión acotada de la línea base ya existente, mismo criterio que la adenda de `GET /temas` sobre ADR-006 el mismo día.
+
+**Output generado**: adenda en `docs/ADR/ADR-012_linea_base_seguridad.md`. Detalle de implementación en `.ai/prompts/developer.md`.
+
+---
+
+## 2026-08-10 — Adenda ADR-006: `GET /temas` (catálogo real para el selector de `(app)/home`)
+
+**Input**: al empezar a construir `(app)/home.tsx` (US-003) se detectó que no existía forma de que `mobile-app` obtuviera el catálogo de Temas — `TemaRepository` solo tenía `findByCode`, sin `findAll`; no había ruta `GET /temas` en `openapi.yaml`; y el seed real de `main.ts` era deliberadamente mínimo (1 Tema, comentado explícitamente como "no es el catálogo real"). Bloqueaba la pantalla por completo: US-003 exige elegir un Tema real del catálogo, no inventado en cliente. Presentado al usuario como decisión de arquitectura con dos opciones (endpoint real vs. catálogo estático en `shared-constants`); eligió el endpoint real.
+
+**Decisión tomada**: `TemaRepository.findAll()` nuevo (sigue sin `save`, el catálogo se sigue poblando por seed, no por la Application layer — sin cambio respecto a la decisión original de ADR-006). `GET /temas`, protegido con el mismo `Bearer` que el resto de rutas autenticadas (coherencia de contrato, no porque el dato sea sensible). Sin filtrado server-side por `AcademicLevel` — el catálogo completo viaja de una vez, el cliente filtra localmente (cada `Tema` ya lleva su propio `academicLevels`), evitando un query param nuevo. Seed real de los 23 Temas de la sección "Catálogo inicial" de ADR-006, transcritos tal cual, sustituyendo el placeholder de 1 Tema.
+
+**Output generado**: adenda en `docs/ADR/ADR-006_math_topics.md`, fila nueva en `ARCHITECTURE.md` ("API REST (Rutas)"), `GET /temas` + schemas `TemaDto`/`GetTemasResponseDto` en `apps/backend-api/openapi.yaml`. Detalle de implementación en `.ai/prompts/developer.md`.
+
+---
+
 ## 2026-08-08 — ADR-015 Arquitectura de pantallas de `mobile-app`
 
 **Input**: El usuario pidió planificar Casos de Uso/User Stories para generar `mobile-app`.

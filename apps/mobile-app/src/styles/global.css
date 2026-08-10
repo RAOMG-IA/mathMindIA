@@ -1,0 +1,30 @@
+/* Scrollbar formal del diseño de la app -- solo tiene efecto en Web (Expo Router/Metro procesan
+   .css con @expo/metro-config, sin efecto en el bundle nativo iOS/Android; ver el equivalente
+   nativo -- indicatorStyle="white" -- en cada ScrollView/FlatList, ver README de src/styles).
+   Colores calcados 1:1 de COLORS en src/components/NeuralLoader/constants.ts (background
+   #0a0e17, ice #4cc9f0) -- CSS no puede importar ese modulo TS, mantener sincronizados a mano
+   si la paleta cambia. */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #4cc9f0 rgba(255, 255, 255, 0.04);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #4cc9f0;
+  border-radius: 8px;
+  border: 2px solid #0a0e17;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #6dd6f5;
+}

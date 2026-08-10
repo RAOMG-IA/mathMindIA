@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { createTokenStorage } from '../src/store/createTokenStorage'
 import { useSessionStore } from '../src/store/useSessionStore'
+// CSS global (scrollbar formal al diseño de la app) -- solo tiene efecto en Web, ver
+// src/styles/README.md. Importado una unica vez aqui, no por pantalla.
+import '../src/styles/global.css'
 
 // Hueco real detectado al montar la primera pantalla que consume src/api (LoginScreen):
 // ningun hook de TanStack Query es utilizable sin un QueryClientProvider en el arbol -- no

@@ -3,6 +3,39 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+## 2026-08-10 — Revisión: CORS (`CORS_ALLOWED_ORIGINS`)
+
+**Contexto utilizado**: `apps/backend-api/src/presentation/http/corsConfig.ts`, `main.ts`, `.env.example`, ADR-012 adenda CORS.
+
+**Hallazgos**:
+1. **Sin wildcard, rechazo por defecto**: `isOriginAllowed([]) === false` para cualquier origen de navegador — pedido explícito del usuario ("que la privacidad no se vea afectada"), verificado con test (`corsConfig.test.ts`, "rechaza cualquier origin si la lista esta vacia") y manualmente (origen no listado → sin cabecera `Access-Control-Allow-Origin`, el navegador bloquea la respuesta).
+2. **`credentials` no habilitado**: el middleware `cors()` se monta sin `credentials: true` — no hay cookies de sesión en este contrato (`Authorization: Bearer <sessionToken>` vía JSON, ADR-015/ARCHITECTURE.md), así que no hace falta, y omitirlo evita abrir esa superficie sin necesidad (si en el futuro se migrara a cookies `httpOnly`, habría que revisar esta config junto con esa decisión, ya señalada como fuera de alcance en ADR-015).
+3. **Sin dependencias nuevas de riesgo**: `cors@2.8.6`/`@types/cors@2.8.19` (mismo `cors` que usa la inmensa mayoría del ecosistema Express, sin CVEs abiertos conocidos a esta fecha). `npm audit` tras instalarlo no atribuye ninguna de las vulnerabilidades existentes (protobufjs/sharp/vite, todas de `ai-engine`/tooling de test) a `cors` en sí.
+4. **Sin secretos**: `CORS_ALLOWED_ORIGINS` son URLs públicas de despliegue, no credenciales — mismo criterio que `DATABASE_URL`/`AI_BASE_URL` en cuanto a vivir solo en `.env`, pero no requiere el mismo secretismo que `JWT_SECRET`/`AI_API_KEY`.
+5. **No introduce ni agrava el hallazgo ya documentado** (revisión 2026-08-10 anterior, guard de `(app)/_layout.tsx`): el manejo de 401/token caducado en `fetchClient.ts` sigue igual, sin relación con CORS.
+
+**Decisión tomada**: sin cambios de código. Ningún hallazgo crítico ni bloqueante.
+
+**Output generado**: esta entrada.
+
+---
+
+## 2026-08-10 — Revisión: `GET /temas` + `(app)/home.tsx`
+
+**Contexto utilizado**: `apps/backend-api/src/presentation/http/{TemaController.ts,routes.ts}`, `apps/backend-api/src/infrastructure/seed/temaCatalog.ts`, `apps/mobile-app/src/screens/HomeScreen.{tsx,validation.ts}`, ADR-012.
+
+**Hallazgos**:
+1. **Sin hallazgos de OWASP Top 10**: `GET /temas` es de solo lectura, sin request body/params que validar -- ninguna superficie de inyección nueva. Protegido con `requireAuth` (mismo middleware Bearer que el resto de rutas), consistente con el resto del contrato, aunque el dato en sí no sea sensible (catálogo de referencia, igual para cualquier usuario).
+2. **Sin secretos ni dependencias nuevas**: `temaCatalog.ts` es contenido editorial público (mismo catálogo ya publicado en ADR-006, un documento del propio repo); ninguna librería nueva instalada.
+3. **Cliente**: `mode`/`academicLevel`/`topic` en `HomeScreen` se eligen de listas cerradas (enum fijo o `code` del catálogo ya descargado), nunca texto libre -- sin superficie de inyección en el formulario. El filtrado client-side (`temasForLevel`) es solo UX; `StartSessionUseCase` sigue validando Tema/AcademicLevel server-side (flujo 1a), consistente con el criterio ya aplicado al guard de `(app)/_layout.tsx` (revisión 2026-08-10 anterior): el cliente nunca es el límite de autorización real.
+4. **Sin regresión del hallazgo ya documentado** (revisión anterior, `(app)/_layout.tsx`): esta tarea no toca `fetchClient.ts` ni el manejo de 401 -- el hueco de sesión no invalidada ante un token caducado sigue igual, no se agrava ni se resuelve aquí.
+
+**Decisión tomada**: sin cambios de código. Ningún hallazgo crítico ni bloqueante.
+
+**Output generado**: esta entrada.
+
+---
+
 ## 2026-08-10 — Revisión: `app/(app)/_layout.tsx` (guard + header global)
 
 **Input**: el usuario pidió comprobar que la validación de Security de la tarea del guard/header (STATUS.md #45) es correcta antes de comitear — Security no se había ejecutado todavía para esa tarea. Revisión real contra el checklist de esta skill, no un registro de trámite.

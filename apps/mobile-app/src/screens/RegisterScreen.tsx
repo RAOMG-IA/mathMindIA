@@ -2,23 +2,10 @@ import { useState } from 'react'
 import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useRegister } from '../api'
-import { BackgroundGrid, EmailInput, NeuralLoader, ParticleField, PasswordInput } from '../components'
+import { AcademicLevelStars, BackgroundGrid, EmailInput, NeuralLoader, ParticleField, PasswordInput } from '../components'
 import { styles } from './RegisterScreen.styles'
 import type { AcademicLevel, RegisterFormErrors } from './RegisterScreen.validation'
 import { validateRegisterForm } from './RegisterScreen.validation'
-
-// Orden ascendente deliberado -- el selector de estrellas es acumulativo (marcar la estrella N
-// marca tambien la 1..N-1): un nivel superior siempre incluye los anteriores ("un ingeniero no
-// puede ser sin tener primaria"), no son 4 opciones independientes.
-const ACADEMIC_LEVELS: ReadonlyArray<{ value: AcademicLevel; label: string }> = [
-  { value: 'Primaria', label: 'Primaria' },
-  { value: 'Secundaria', label: 'Secundaria' },
-  { value: 'Bachillerato', label: 'Bachillerato' },
-  { value: 'Ingenieria', label: 'Ingeniería' },
-]
-
-const STAR_FILLED = '★'
-const STAR_EMPTY = '☆'
 
 // El unico mensaje real que RegisterUseCase lanza para email duplicado es en ingles y
 // literal ("Email already registered: <email>", routes.ts lo reenvia tal cual, exposeMessage
@@ -43,9 +30,6 @@ export function RegisterScreen() {
   const [password, setPassword] = useState('')
   const [academicLevel, setAcademicLevel] = useState<AcademicLevel | null>(null)
   const [fieldErrors, setFieldErrors] = useState<RegisterFormErrors>({})
-
-  const selectedIndex = academicLevel ? ACADEMIC_LEVELS.findIndex((level) => level.value === academicLevel) : -1
-  const selectedLabel = selectedIndex >= 0 ? ACADEMIC_LEVELS[selectedIndex].label : null
 
   const emailTakenError =
     register.isError && isEmailAlreadyRegisteredError(register.error.message) ? 'Ese email ya está en uso' : undefined
@@ -91,27 +75,7 @@ export function RegisterScreen() {
 
           <PasswordInput value={password} onChangeText={setPassword} error={fieldErrors.password} />
 
-          <View style={styles.field}>
-            <Text style={styles.label}>Nivel de complejidad</Text>
-            <View style={styles.starRow}>
-              {ACADEMIC_LEVELS.map((level, index) => (
-                <TouchableOpacity
-                  key={level.value}
-                  style={styles.star}
-                  onPress={() => setAcademicLevel(level.value)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Nivel de complejidad: ${level.label}`}
-                  accessibilityState={{ selected: index <= selectedIndex }}
-                >
-                  <Text style={index <= selectedIndex ? styles.starTextFilled : styles.starTextEmpty}>
-                    {index <= selectedIndex ? STAR_FILLED : STAR_EMPTY}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {selectedLabel ? <Text style={styles.levelSelectedLabel}>{selectedLabel}</Text> : null}
-            {fieldErrors.academicLevel ? <Text style={styles.errorText}>{fieldErrors.academicLevel}</Text> : null}
-          </View>
+          <AcademicLevelStars value={academicLevel} onChange={setAcademicLevel} error={fieldErrors.academicLevel} />
 
           {showGenericServerError ? (
             <View style={styles.serverErrorBanner}>

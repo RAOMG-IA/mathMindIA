@@ -411,6 +411,7 @@ Mapeo de rutas HTTP a los Controllers ya existentes (`apps/backend-api/src/prese
 | POST | `/answers` | Sí | `AnswerController.submitAnswer` | `SubmitAnswerRequestDto` → `SubmitAnswerResponseDto` | UC-002 (compone UC-008 en la misma respuesta) |
 | POST | `/hints` | Sí | `HintController.requestHint` | `RequestHintRequestDto` → `RequestHintResponseDto` | UC-003 |
 | GET | `/users/me/statistics` | Sí | `StatisticsController.getStatistics(userId)` | — → `GetUserStatisticsResponseDto` | UC-007 |
+| GET | `/temas` | Sí | `TemaController.listTemas()` | — → `GetTemasResponseDto` | ADR-006 adenda 2026-08-10 |
 
 **Auth**: header `Authorization: Bearer <sessionToken>` (el `sessionToken` opaco ya devuelto por `register`/`login`). Un middleware lo resuelve a `userId` y lo inyecta en el `Controller` (mismo patrón que `StatisticsController.getStatistics(userId)`, nunca tomado del body — evita que un cliente suplante a otro usuario). El mecanismo interno del token (JWT vs sesión de servidor) sigue sin decidir — ver [US-002](../../docs/user-stories/US-002-login.md), "Fuera de alcance" — esta tabla solo fija el transporte (`Bearer`), no la verificación.
 

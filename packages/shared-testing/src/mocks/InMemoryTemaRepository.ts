@@ -13,4 +13,8 @@ export class InMemoryTemaRepository implements TemaRepository {
   async findByCode(code: TemaCode): Promise<Tema | null> {
     return this.temas.get(code) ?? null
   }
+
+  async findAll(): Promise<readonly Tema[]> {
+    return [...this.temas.values()]
+  }
 }
