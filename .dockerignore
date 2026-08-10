@@ -1,0 +1,17 @@
+# Excluye del contexto de build del contenedor node (ADR-016) todo lo que el
+# daemon no necesita: evita subir node_modules/.git al daemon y acelera/cachea builds.
+
+node_modules
+.git
+.env
+.env.*
+!*.env.example
+rag
+coverage
+dist
+build
+.turbo
+.expo
+web-build
+*.log
+docker-compose.yml

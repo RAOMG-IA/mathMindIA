@@ -1,5 +1,5 @@
 import { FakeEmbedder } from '@mathmind/shared-testing'
-import { afterAll, afterEach, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createPrismaClient } from '../persistence/prismaClient.js'
 import { PostgresKnowledgeBaseIndex } from './PostgresKnowledgeBaseIndex.js'
 
@@ -8,6 +8,15 @@ describe('PostgresKnowledgeBaseIndex (integration)', () => {
   const embedder = new FakeEmbedder()
   const index = new PostgresKnowledgeBaseIndex(prisma, embedder)
   const sourceFileNames: string[] = []
+
+  // Aislamiento real (hallazgo de la verificacion DevOps 2026-08-10): el test "array vacio si no
+  // hay nada indexado" exige una tabla sin chunks, y en el contenedor Docker se rompe en cuanto
+  // existe material ingerido de verdad (rag_chunks con data real del ingest). Se limpia la tabla
+  // completa: rag_chunks es un indice derivado/regenerable via `npm run ingest:rag`, no datos de
+  // usuario -- eliminar sus filas durante el run de integracion no pierde nada irreemplazable.
+  beforeEach(async () => {
+    await prisma.$executeRaw`DELETE FROM rag_chunks`
+  })
 
   afterEach(async () => {
     await prisma.$executeRaw`DELETE FROM rag_chunks WHERE source_file_name = ANY(${sourceFileNames})`

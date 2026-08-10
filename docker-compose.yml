@@ -1,0 +1,96 @@
+# Entorno de desarrollo Docker de MathMind AI
+# Ver docs/ADR/ADR-016_entorno_docker.md
+# Variables configurables desde .env (plantilla: .env.example).
+
+name: mathmindia
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mathmindia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mathmind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mathmind}
+      POSTGRES_DB: ${POSTGRES_DB:-mathmindia}
+    ports:
+      # Hallazgo Security (2026-08-10): enlazar a 127.0.0.1 para no exponer
+      # Postgres en la LAN; en dev local no hay motivo de bind a 0.0.0.0.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mathmindia
+
+  redis:
+    image: redis:7-alpine
+    container_name: mathmindia-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - mathmindia
+
+  node:
+    build:
+      context: .
+      dockerfile: docker/node/Dockerfile
+    container_name: mathmindia-node
+    working_dir: /workspace/apps/backend-api
+    environment:
+      # dotenv (main.ts / prisma.config.ts) no pisa variables ya definidas:
+      # estas environment: del compose tienen prioridad sobre el .env montado.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mathmind}:${POSTGRES_PASSWORD:-mathmind}@postgres:5432/${POSTGRES_DB:-mathmindia}
+      REDIS_URL: redis://redis:6379
+      PORT: 3000
+      # JWT_SECRET: placeholder SOLO para desarrollo. En cualquier entorno
+      # compartido/produccion debe venir de .env real (ADR-012: secretos solo env).
+      JWT_SECRET: ${JWT_SECRET:-mathmindia-dev-only-secret}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-}
+      AI_MODEL_NAME: ${AI_MODEL_NAME:-}
+      # RAG (UC-011 / ADR-014): directorios montados en ./rag/{input,history}
+      # ./rag/examples es material de referencia versionable por el usuario: para cada
+      # prueba se copia un ejemplo a input (p. ej. desde el contenedor: cp /workspace/rag/examples/aritmetica-suma.txt /workspace/rag/input/) y se ejecuta npm run ingest:rag.
+      RAG_INPUT_DIR: ${RAG_INPUT_DIR:-/workspace/rag/input}
+      RAG_HISTORY_DIR: ${RAG_HISTORY_DIR:-/workspace/rag/history}
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    volumes:
+      - .:/workspace:cached
+      - node_modules:/workspace/node_modules
+      - ./rag/input:/workspace/rag/input
+      - ./rag/history:/workspace/rag/history
+      - ./rag/examples:/workspace/rag/examples
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: npm run dev
+    networks:
+      - mathmindia
+
+volumes:
+  pgdata:
+  redisdata:
+  node_modules:
+
+networks:
+  mathmindia:

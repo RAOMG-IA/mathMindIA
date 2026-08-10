@@ -18,6 +18,12 @@ web-build/
 .env.local
 .env.*.local
 
+# Docker dev: directorios RAG montados en el contenedor node (ADR-016).
+# Anclado a la raiz (/rag/): sin el anclaje, "rag/" ignora TAMBIEN
+# apps/backend-api/src/infrastructure/rag/ (todo el codigo RAG nuevo quedaria
+# fuera del repo) -- hallazgo de la verificacion DevOps 2026-08-10.
+/rag/
+
 # Editor / OS
 .DS_Store
 Thumbs.db
