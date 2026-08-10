@@ -82,3 +82,64 @@ handoff:
 **Validación**: handoff completo (8/8 campos) — se procede a ejecutar. Knowledge Manager: confirmado que no existe RAG de producto (solo el RAG documental interno de `knowledge-manager.md`, sobre el propio repositorio) ni actor distinto de `User` en el dominio.
 
 **Output generado**: `docs/user-stories/US-008-subir-material-rag.md`, `docs/user-stories/README.md` (índice + nota de trazabilidad), `.ai/prompts/product.md`.
+
+---
+
+## 2026-08-10 — Tercer handoff real: entorno de desarrollo Docker (infraestructura + Node)
+
+**Input**: el usuario pidió comenzar la instalación en Docker para DevOps (CI/CD se demoraba por la instalación local de servicios). Como Director, se refinó el alcance vía AskUserQuestion: **solo infraestructura + contenedor de desarrollo Node** (sin imágenes de producción, sin CI, sin containerizar `mobile-app`), Redis **incluido** en el compose pese a no tener consumidor en código todavía (declarado en ARCHITECTURE/README), y el Postgres contenedor como **base canónica de desarrollo** (desbloquea `prisma migrate dev`, bloqueado por el bug de collation del Postgres local desde STATUS #31/#33).
+
+```yaml
+handoff:
+  requester: "User"
+  objective: >
+    Entorno de desarrollo local completo via Docker: docker-compose con Postgres+pgvector,
+    Redis y un contenedor de desarrollo Node.js para backend-api/ai-engine, que sustituya la
+    instalacion local de servicios y desbloquee la migracion formal de Prisma.
+  scope: >
+    docker-compose.yml (raiz, ya existe vacio), docker/postgres (init pgvector),
+    docker/node/Dockerfile, scripts/setup/* (bootstrap .env + up + migracion/seed),
+    .env.example actualizado, ADR-016 + ARCHITECTURE.md. NO incluye: imagenes de produccion,
+    CI/CD, containerizacion de mobile-app, ni codigo consumidor de Redis.
+  constraints:
+    - "Secretos solo via variables de entorno / .env, nunca versionado (ADR-012)"
+    - "Node 22 segun .nvmrc; npm 11.6.1"
+    - "pgvector obligatorio en la imagen de postgres (ADR-014 / RAG)"
+    - "No tocar dominio, casos de uso ni persistencia (schema.prisma) en esta fase"
+    - "Evitar conflicto de puerto con el Postgres local del usuario"
+    - "Cero servicios nuevos mas alla de los 3 pedidos (mono-servidor)"
+  references:
+    - "docs/ADR/ADR-014_rag.md (pgvector)"
+    - "docs/ADR/ADR-013_modelo_datos_fisico.md + database/schema.prisma (migracion pendiente)"
+    - "docs/ADR/ADR-012_linea_base_seguridad.md (secretos)"
+    - "docs/STATUS.md #31/#33 (bloqueo de migracion por collation local)"
+    - "ARCHITECTURE.md (stack: Docker, Redis, Postgres declarados)"
+    - ".nvmrc, package.json (scripts dev/build/test/integration)"
+  acceptance:
+    - "docker compose up -d levanta los 3 servicios con healthcheck OK"
+    - "prisma migrate dev genera la migracion inicial contra el Postgres contenedor (bloqueo local resuelto)"
+    - "npm run test:integration (31 tests) verde contra el Postgres contenedor"
+    - "RAG end-to-end: ingest + search semanticos OK contra el contenedor"
+    - "scripts/setup reproducible en una maquina limpia, documentado"
+    - "Sin secretos versionados; .env documentado en .env.example"
+    - "README/ARCHITECTURE/STATUS actualizados"
+  risks:
+    - "Puerto 5432 ocupado por el Postgres local (hay que pararlo o mapear otro puerto)"
+    - "Imagen pgvector multi-arch: descarga/plataforma en Windows"
+    - "Primera prisma migrate dev sobre base vacia puede detectar drift de schema"
+    - "Descarga de imagenes requiere red; primera vez mas lenta"
+    - "Docker daemon apagado: docker info falla (hay que arrancar Docker Desktop)"
+  required_agents:
+    - "Architecture Agent (ADR-016 + diseno)"
+    - "Test Agent (criterios de verificacion/integracion)"
+    - "Developer Agent (implementacion)"
+    - "Reviewer Agent"
+    - "Security Agent (secretos/ADR-012)"
+    - "DevOps Agent (arranque y verificacion reales)"
+    - "Documentation Agent"
+    # Product NO aplica: infraestructura de desarrollo, sin requisito funcional de producto (justificacion explicita)
+```
+
+**Validación**: handoff completo (8/8 campos) — se procede a ejecutar. Entorno verificado por el Director antes del despacho: **conflictos detectados** — (1) Puerto 5432 ocupado por Postgres local (PID 11168); (2) Docker daemon apagado (engine no responde); 6379/3000 libres. Ambos se gestionan en la fase DevOps (el usuario ya decidió migrar a contenedor; habrá que parar el Postgres local).
+
+**Output generado**: este handoff. Ficheros y tarea del commit agrupados: la tarea es `handoff-2026-08-10-docker-dev` y agrupará `docker-compose.yml`, `docker/`, `scripts/setup/`, `.env.example*`, ADR-016, `ARCHITECTURE.md`, `docs/STATUS.md`, `.ai/prompts/*` — ver `.ai/prompts/devops.md` al cierre.

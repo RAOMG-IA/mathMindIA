@@ -398,6 +398,28 @@ Redis Cache
 
 ---
 
+# Entorno de Desarrollo con Docker
+
+El stack de desarrollo local se levanta con Docker Compose ([ADR-016](docs/ADR/ADR-016_entorno_docker.md)):
+
+- **Postgres** (`pgvector/pgvector:pg16`): base canónica de desarrollo, con pgvector preinstalado (RAG, ADR-014). Sustituye al Postgres local y desbloquea la migración formal de Prisma.
+- **Redis** (`redis:7-alpine`): servicio declarado en el stack; sin consumidor de código todavía.
+- **node** (`node:22`): contenedor de desarrollo del monorepo (backend-api + ai-engine + packages) con `tsx watch` en el puerto 3000.
+
+Arranque:
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/setup/dev-env.ps1
+# o manualmente:  docker compose up -d --build
+# migración:      docker compose exec node npm run db:migrate -- --name init
+# integración:    docker compose exec node npm run test:integration
+# RAG:            deposita ficheros en ./rag/input y ejecuta docker compose exec node npm run ingest:rag
+```
+
+Variables configurables en `.env` raíz (plantilla `.env.example`). Sin imágenes de producción ni CI en esta fase.
+
+---
+
 # API REST (Rutas)
 
 Mapeo de rutas HTTP a los Controllers ya existentes (`apps/backend-api/src/presentation/http`, `declare class` sin cuerpo) y a los DTOs de `packages/shared-types/src/dtos`. Una ruta por DTO — sin anidar recursos en la URL cuando el DTO ya lleva el identificador en el body, para no duplicar el dato en dos sitios.
