@@ -15,7 +15,7 @@ import type {
 // HintGenerator es la abstraccion que la Application layer usa para no depender directamente
 // de apps/ai-engine (app separada, ver ARCHITECTURE.md -- Backend API y AI Engine son cajas
 // distintas). Implementacion real: apps/backend-api/src/infrastructure/ai/QwenHintGenerator.ts
-// (envuelve QwenClient, import directo in-process -- ver ADR-001).
+// (envuelve IAClient, import directo in-process -- ver ADR-001).
 // previousHints: pistas ya generadas para este ejercicio, en orden, para progresion (US-005,
 // "Pistas progresivas") -- GenerateHintUseCase las recopila via HintRepository antes de llamar.
 export interface HintGenerator {

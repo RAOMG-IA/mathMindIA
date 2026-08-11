@@ -1,5 +1,5 @@
 export * from './llm/ChatModel.js'
-export * from './llm/QwenClient.js'
+export * from './llm/IAClient.js'
 export * from './llm/LangChainChatModel.js'
 export * from './prompts/GenerateExercise.js'
 export * from './prompts/GenerateHint.js'

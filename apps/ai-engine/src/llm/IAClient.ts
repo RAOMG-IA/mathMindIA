@@ -4,20 +4,22 @@ import type { GenerateExerciseInput, GenerateExerciseOutput } from '../prompts/G
 import { buildGenerateHintPrompt, generateHintOutputSchema } from '../prompts/GenerateHint.js'
 import type { GenerateHintInput, GenerateHintOutput } from '../prompts/GenerateHint.js'
 
-// Cliente LLM (nombre historico "Qwen", ver ADR-001 -- en la practica agnostico de proveedor,
-// cualquier endpoint compatible con la API de OpenAI). Ver ARCHITECTURE.md "Estrategia IA" --
-// solo se invoca desde UC-001 (batch) y UC-003 (pistas), nunca en el flujo critico de
-// una peticion de usuario (ver UC-008, que es determinista y no usa este cliente).
+// Cliente LLM agnostico de proveedor -- renombrado desde "QwenClient" (nombre historico, ver
+// ADR-001) porque en la practica nunca dependio de Qwen especificamente, cualquier endpoint
+// compatible con la API de OpenAI vale (DeepSeek/Groq/Gemini ya se han usado indistintamente,
+// ver .env.example). Ver ARCHITECTURE.md "Estrategia IA" -- solo se invoca desde UC-001 (batch)
+// y UC-003 (pistas), nunca en el flujo critico de una peticion de usuario (ver UC-008, que es
+// determinista y no usa este cliente).
 // Recibe ChatModel por constructor (puerto local, ver ChatModel.ts) -- desacopla de
 // LangChain concreto y permite TDD sin red real; la implementacion real que envuelve
 // LangChain es LangChainChatModel.ts.
-export class QwenClient {
+export class IAClient {
   constructor(private readonly model: ChatModel) {}
 
   async generateExercise(input: GenerateExerciseInput): Promise<GenerateExerciseOutput> {
     const results = await this.generateExercises(input)
     const [first] = results
-    if (!first) throw new Error('QwenClient.generateExercise: empty result array')
+    if (!first) throw new Error('IAClient.generateExercise: empty result array')
     return first
   }
 

@@ -13,11 +13,11 @@ import {
   SequentialIdGenerator,
 } from '@mathmind/shared-testing'
 import type { Tema } from '@mathmind/shared-domain'
-import type { QwenClient } from '../llm/QwenClient.js'
+import type { IAClient } from '../llm/IAClient.js'
 import type { GenerateExerciseInput, GenerateExerciseOutput } from '../prompts/GenerateExercise.js'
 import { GenerateExerciseBatchUseCase } from './GenerateExerciseBatchUseCase.js'
 
-class QueuedExerciseGenerator implements Pick<QwenClient, 'generateExercise'> {
+class QueuedExerciseGenerator implements Pick<IAClient, 'generateExercise'> {
   private cursor = 0
   readonly calls: GenerateExerciseInput[] = []
 
@@ -53,11 +53,11 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
   })
 
   it('genera y persiste un Exercise tipo Resolution valido al primer intento', async () => {
-    const qwen = new QueuedExerciseGenerator([
+    const ia = new QueuedExerciseGenerator([
       { statement: '15 + 27', correctAnswer: '42', explanation: '15 + 27 = 42' },
     ])
     const useCase = new GenerateExerciseBatchUseCase(
-      qwen,
+      ia,
       exercises,
       new SequentialIdGenerator('exercise'),
       new InMemoryKnowledgeBaseIndex(),
@@ -70,18 +70,18 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
     expect(result.exercises[0]!.options).toBeUndefined()
     expect(result.exercises[0]!.generatedBy).toBe('ai-batch')
     expect(result.exercises[0]!.difficulty.value).toBe(625) // punto medio de 500-750
-    expect(qwen.calls).toHaveLength(1)
+    expect(ia.calls).toHaveLength(1)
 
     const persisted = await exercises.findById('exercise-1' as never)
     expect(persisted?.statement).toBe('15 + 27')
   })
 
   it('genera y persiste un Exercise tipo Test valido (3 opciones, correctAnswer incluida)', async () => {
-    const qwen = new QueuedExerciseGenerator([
+    const ia = new QueuedExerciseGenerator([
       { statement: '15 + 27', options: ['40', '42', '45'], correctAnswer: '42', explanation: '15 + 27 = 42' },
     ])
     const useCase = new GenerateExerciseBatchUseCase(
-      qwen,
+      ia,
       exercises,
       new SequentialIdGenerator('exercise'),
       new InMemoryKnowledgeBaseIndex(),
@@ -94,13 +94,13 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
   })
 
   it('flujo 4a, reintenta si el primer intento viola la invariante y el segundo es valido', async () => {
-    const qwen = new QueuedExerciseGenerator([
+    const ia = new QueuedExerciseGenerator([
       // Test sin options: viola la invariante (type='Test' exige exactamente 3 opciones).
       { statement: '15 + 27', correctAnswer: '42', explanation: '15 + 27 = 42' },
       { statement: '15 + 27', options: ['40', '42', '45'], correctAnswer: '42', explanation: '15 + 27 = 42' },
     ])
     const useCase = new GenerateExerciseBatchUseCase(
-      qwen,
+      ia,
       exercises,
       new SequentialIdGenerator('exercise'),
       new InMemoryKnowledgeBaseIndex(),
@@ -108,25 +108,25 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
 
     const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' })
 
-    expect(qwen.calls).toHaveLength(2)
+    expect(ia.calls).toHaveLength(2)
     expect(result.exercises[0]!.options).toEqual(['40', '42', '45'])
   })
 
   it('lanza tras agotar los intentos si ninguna generacion es valida', async () => {
-    const qwen = new QueuedExerciseGenerator([
+    const ia = new QueuedExerciseGenerator([
       { statement: 'a', correctAnswer: 'x', explanation: 'e' },
       { statement: 'b', correctAnswer: 'x', explanation: 'e' },
       { statement: 'c', correctAnswer: 'x', explanation: 'e' },
     ])
     const useCase = new GenerateExerciseBatchUseCase(
-      qwen,
+      ia,
       exercises,
       new SequentialIdGenerator('exercise'),
       new InMemoryKnowledgeBaseIndex(),
     )
 
     await expect(useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' })).rejects.toThrow()
-    expect(qwen.calls.length).toBeGreaterThan(1)
+    expect(ia.calls.length).toBeGreaterThan(1)
 
     const all = await exercises.findByDifficultyBand({
       academicLevel: 'Primaria',
@@ -137,15 +137,15 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
   })
 
   it('lanza si el Tema no aplica al AcademicLevel pedido', async () => {
-    const qwen = new QueuedExerciseGenerator([])
+    const ia = new QueuedExerciseGenerator([])
     const useCase = new GenerateExerciseBatchUseCase(
-      qwen,
+      ia,
       exercises,
       new SequentialIdGenerator('exercise'),
       new InMemoryKnowledgeBaseIndex(),
     )
 
     await expect(useCase.execute({ tema: aTema(), academicLevel: 'Secundaria', type: 'Resolution' })).rejects.toThrow()
-    expect(qwen.calls).toHaveLength(0)
+    expect(ia.calls).toHaveLength(0)
   })
 })

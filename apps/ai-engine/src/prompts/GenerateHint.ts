@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 // UC-003 Generate Hint, paso 4: construir el prompt cuando no existe ya una Hint
-// para ese (exerciseId, order). Incluye correctAnswer para que Qwen genere una pista
+// para ese (exerciseId, order). Incluye correctAnswer para que la IA genere una pista
 // informada sin revelarla directamente, y previousHints para que la progresion sea
 // cada vez mas detallada (US-005, escenario "Pistas progresivas").
 // context: chunks recuperados de la base de conocimiento (UC-011/ADR-014), opcional -- un

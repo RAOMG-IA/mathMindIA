@@ -1,4 +1,4 @@
-import type { QwenClient } from '@mathmind/ai-engine'
+import type { IAClient } from '@mathmind/ai-engine'
 import type { Exercise, KnowledgeBaseIndex } from '@mathmind/shared-domain'
 import type { HintGenerator } from '../../application/use-cases/GenerateHintUseCase.js'
 
@@ -7,13 +7,14 @@ import type { HintGenerator } from '../../application/use-cases/GenerateHintUseC
 const TOP_K = 3
 
 // Adaptador real del puerto HintGenerator (GenerateHintUseCase.ts, UC-003) -- envuelve
-// QwenClient (packages @mathmind/ai-engine, import directo in-process, ver ADR-001). Solo
-// necesita el metodo generateHint de QwenClient (Pick, no la clase completa) para poder
-// inyectar un fake estructural en tests sin depender de LangChain real.
+// IAClient (packages @mathmind/ai-engine, import directo in-process, ver ADR-001; clase
+// renombrada desde QwenClient, nombre historico, ver IAClient.ts). Solo necesita el metodo
+// generateHint de IAClient (Pick, no la clase completa) para poder inyectar un fake
+// estructural en tests sin depender de LangChain real.
 //
 export class QwenHintGenerator implements HintGenerator {
   constructor(
-    private readonly qwen: Pick<QwenClient, 'generateHint'>,
+    private readonly ia: Pick<IAClient, 'generateHint'>,
     private readonly knowledgeBase: KnowledgeBaseIndex,
   ) {}
 
@@ -27,7 +28,7 @@ export class QwenHintGenerator implements HintGenerator {
     const query = `${input.exercise.topic} ${input.exercise.statement}`
     const context = await this.knowledgeBase.search(query, TOP_K)
 
-    const result = await this.qwen.generateHint({
+    const result = await this.ia.generateHint({
       exerciseStatement: input.exercise.statement,
       correctAnswer: input.exercise.correctAnswer,
       previousHints: input.previousHints,

@@ -8,7 +8,7 @@ import type {
   KnowledgeBaseIndex,
   Tema,
 } from '@mathmind/shared-domain'
-import type { QwenClient } from '../llm/QwenClient.js'
+import type { IAClient } from '../llm/IAClient.js'
 import type { GenerateExerciseOutput } from '../prompts/GenerateExercise.js'
 
 // Ver docs/use-cases/UC-001-generate-exercise-batch.md y docs/ADR/ADR-006_math_topics.md.
@@ -35,7 +35,7 @@ export interface GenerateExerciseBatchOutput {
 const MAX_ATTEMPTS = 3
 
 // Ningun ADR/UC fija el limite de tiempo de un ejercicio generado por IA -- Timer es una
-// invariante de Exercise (ADR-004) que Qwen no decide (evita que la IA controle una regla
+// invariante de Exercise (ADR-004) que el LLM no decide (evita que la IA controle una regla
 // deterministica, ver ARCHITECTURE.md "Estrategia IA"). Placeholder documentado, igual criterio
 // que INITIAL_RATING: 15s es un presupuesto razonable de calculo mental, sin calibrar.
 const DEFAULT_TIME_LIMIT_MS = 15000
@@ -53,7 +53,7 @@ function violatesExerciseInvariant(type: ExerciseType, output: GenerateExerciseO
 
 export class GenerateExerciseBatchUseCase {
   constructor(
-    private readonly qwen: Pick<QwenClient, 'generateExercise'> & Partial<Pick<QwenClient, 'generateExercises'>>,
+    private readonly ia: Pick<IAClient, 'generateExercise'> & Partial<Pick<IAClient, 'generateExercises'>>,
     private readonly exercises: ExerciseRepository,
     private readonly ids: IdGenerator,
     private readonly knowledgeBase: KnowledgeBaseIndex,
@@ -87,9 +87,9 @@ export class GenerateExerciseBatchUseCase {
         count: remaining,
       }
 
-      const generatedList = this.qwen.generateExercises
-        ? await this.qwen.generateExercises(batchInput)
-        : [await this.qwen.generateExercise(batchInput)]
+      const generatedList = this.ia.generateExercises
+        ? await this.ia.generateExercises(batchInput)
+        : [await this.ia.generateExercise(batchInput)]
 
       const valids: GenerateExerciseOutput[] = []
       for (const g of generatedList) {

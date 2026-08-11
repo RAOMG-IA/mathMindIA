@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { InMemoryHintUsageTracker, InMemoryTemaRepository } from '@mathmind/shared-testing'
-import { LangChainChatModel, QwenClient } from '@mathmind/ai-engine'
+import { IAClient, LangChainChatModel } from '@mathmind/ai-engine'
 import type { ExerciseId } from '@mathmind/shared-domain'
 import { createRoutes } from './http/routes.js'
 import { isOriginAllowed, parseAllowedOrigins } from './http/corsConfig.js'
@@ -117,7 +117,7 @@ const chatModel =
     : undefined
 
 const hintGenerator = chatModel
-  ? new QwenHintGenerator(new QwenClient(chatModel), knowledgeBase)
+  ? new QwenHintGenerator(new IAClient(chatModel), knowledgeBase)
   : undefined
 if (!hintGenerator) {
   console.warn('AI_API_KEY/AI_BASE_URL not set -- POST /hints will fail until configured.')

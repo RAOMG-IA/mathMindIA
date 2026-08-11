@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import type { AcademicLevel, ExerciseType, Tema } from '@mathmind/shared-domain'
-import { GenerateExerciseBatchUseCase, LangChainChatModel, QwenClient } from '@mathmind/ai-engine'
+import { GenerateExerciseBatchUseCase, IAClient, LangChainChatModel } from '@mathmind/ai-engine'
 import { createPrismaClient } from '../infrastructure/persistence/prismaClient.js'
 import { PrismaExerciseRepository } from '../infrastructure/repositories/PrismaExerciseRepository.js'
 import { PostgresKnowledgeBaseIndex } from '../infrastructure/rag/PostgresKnowledgeBaseIndex.js'
@@ -40,7 +40,7 @@ const countPerCombo = Number(process.env.EXERCISE_BATCH_COUNT ?? 1)
 // Ritmo/reintentos ante rate limiting del proveedor -- hueco real detectado al ejecutar contra
 // el plan gratuito de Gemini: sin pausa entre llamadas, un lote de mas de ~6 peticiones seguidas
 // agota la cuota por minuto y el resto falla con 429 (sin reintento en GenerateExerciseBatchUseCase
-// ni en QwenClient, ninguno de los dos es responsabilidad de un script CLI operativo). Backoff
+// ni en IAClient, ninguno de los dos es responsabilidad de un script CLI operativo). Backoff
 // exponencial solo ante 429 -- otros errores (p. ej. invariante violada tras los reintentos
 // internos del propio UseCase) no se reintentan aqui, se cuentan como fallo y se sigue.
 const CALL_DELAY_MS = Number(process.env.EXERCISE_BATCH_DELAY_MS ?? 3000)
@@ -81,7 +81,7 @@ const knowledgeBase = new PostgresKnowledgeBaseIndex(prisma, new XenovaEmbedder(
 const chatModel = AI_MODEL_NAME
   ? new LangChainChatModel(AI_API_KEY, AI_BASE_URL, AI_MODEL_NAME)
   : new LangChainChatModel(AI_API_KEY, AI_BASE_URL)
-const useCase = new GenerateExerciseBatchUseCase(new QwenClient(chatModel), exercises, { generate: () => crypto.randomUUID() }, knowledgeBase)
+const useCase = new GenerateExerciseBatchUseCase(new IAClient(chatModel), exercises, { generate: () => crypto.randomUUID() }, knowledgeBase)
 
 console.log(
   `Generando hasta ${combos.length * countPerCombo} ejercicios (${combos.length} combinaciones Tema x Nivel x Tipo, x${countPerCombo} cada una), ritmo ${CALL_DELAY_MS}ms entre llamadas...`,
