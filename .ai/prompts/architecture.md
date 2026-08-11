@@ -24,6 +24,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-047
+date: 2026-08-10
+agentes: [architecture]
+flujo: [architecture, developer, security]
+estado: done
+---
+
 ## 2026-08-10 — Adenda ADR-012: CORS (`CORS_ALLOWED_ORIGINS`)
 
 **Input**: el usuario reportó que el registro fallaba por CORS al probar `mobile-app` (Expo Web, `:8081`) contra `backend-api` real (`:3000`) — orígenes distintos, sin ninguna cabecera CORS en las respuestas del backend. Pidió una allowlist configurable por `.env`, explícito en no comprometer la privacidad (sin wildcard).
@@ -34,6 +42,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-046
+date: 2026-08-10
+agentes: [architecture]
+flujo: [architecture, developer, security]
+estado: done
+---
+
 ## 2026-08-10 — Adenda ADR-006: `GET /temas` (catálogo real para el selector de `(app)/home`)
 
 **Input**: al empezar a construir `(app)/home.tsx` (US-003) se detectó que no existía forma de que `mobile-app` obtuviera el catálogo de Temas — `TemaRepository` solo tenía `findByCode`, sin `findAll`; no había ruta `GET /temas` en `openapi.yaml`; y el seed real de `main.ts` era deliberadamente mínimo (1 Tema, comentado explícitamente como "no es el catálogo real"). Bloqueaba la pantalla por completo: US-003 exige elegir un Tema real del catálogo, no inventado en cliente. Presentado al usuario como decisión de arquitectura con dos opciones (endpoint real vs. catálogo estático en `shared-constants`); eligió el endpoint real.
@@ -42,6 +58,14 @@ estado: done
 
 **Output generado**: adenda en `docs/ADR/ADR-006_math_topics.md`, fila nueva en `ARCHITECTURE.md` ("API REST (Rutas)"), `GET /temas` + schemas `TemaDto`/`GetTemasResponseDto` en `apps/backend-api/openapi.yaml`. Detalle de implementación en `.ai/prompts/developer.md`.
 
+---
+
+---
+task_id: STATUS-034
+date: 2026-08-08
+agentes: [architecture]
+flujo: [architecture]
+estado: done
 ---
 
 ## 2026-08-08 — ADR-015 Arquitectura de pantallas de `mobile-app`
@@ -58,6 +82,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-002
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-05 — ADR-005 Adaptive Difficulty Engine
 
 **Input**: Solicitud de diseñar ADR-005 (pendiente prioritario #2 en ADR-000_Estructura.md), con inputs/output ya fijados (Accuracy, Response Time, Current Streak, Previous Difficulty → Next Difficulty).
@@ -68,6 +100,14 @@ estado: done
 
 **Output generado**: [docs/ADR/ADR-005-adaptive-difficulty-engine.md](../../docs/ADR/ADR-005-adaptive-difficulty-engine.md).
 
+---
+
+---
+task_id: STATUS-001
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
 ---
 
 ## 2026-08-05 — ADR-004 Modelo de Dominio
@@ -82,6 +122,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-000
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-05 — División de ADR-000 en ADR-000/001/002/003 + STATUS.md
 
 **Input**: Solicitud del usuario de dividir el "resumen maestro" `ADR-000_Estructura.md` en documentos temáticos separados, para respetar la convención de ADR (una decisión por registro, casi inmutable) en vez de mezclar producto, arquitectura, agentes, reglas y estado de avance en un único archivo.
@@ -94,6 +142,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-005
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-05 — Casos de Uso UC-001 a UC-008
 
 **Input**: Generar los Casos de Uso (pendiente #5 de STATUS.md) en `docs/use-cases/*`, formalizando la lista candidata UC-001 a UC-006 y cerrando el hueco de UC-007 detectado al escribir US-007.
@@ -104,6 +160,14 @@ estado: done
 
 **Output generado**: [docs/use-cases/](../../docs/use-cases/) (README índice + UC-001 a UC-008).
 
+---
+
+---
+task_id: STATUS-006
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
 ---
 
 ## 2026-08-05 — Scaffolding del monorepo (apps/ + packages/)
@@ -127,6 +191,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-010
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-05 — Expo Router para apps/mobile-app
 
 **Input**: Decidir librería de navegación para `mobile-app` (quedó pendiente al hacer el scaffolding inicial, punto #10 de STATUS.md). Se discutió con el usuario React Navigation vs. Expo Router; recomendé Expo Router y el usuario lo confirmó ("actualiza a expo router").
@@ -141,6 +213,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-012
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-05 — Contratos de repositorio (packages/shared-domain)
 
 **Input**: Definir los contratos de dominio en dos fases (petición del usuario): primero repositorio, luego frontera. Esta entrada cubre solo la fase de repositorio.
@@ -151,6 +231,14 @@ estado: done
 
 **Output generado**: 18 archivos `.ts` en `packages/shared-domain/src/`, barrel export actualizado. `npx turbo run typecheck` (13/13) y `lint` de `shared-domain` verificados en verde tras el cambio.
 
+---
+
+---
+task_id: STATUS-013
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
 ---
 
 ## 2026-08-05 — Contratos de frontera: DTOs API + contrato Qwen (fase 2)
@@ -167,6 +255,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-014
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-06 — ADR-013 Modelo de Datos Físico + schema.prisma
 
 **Input**: Pregunta del usuario en US-001 (Registro): ¿falta algún artefacto de conexión/definición de BBDD? Correcto — ni el esquema físico ni el ORM estaban ratificados (Prisma solo aparecía como ejemplo suelto en ARCHITECTURE.md, igual que la librería de navegación de `mobile-app` en su momento). Confirmado Prisma con el usuario vía AskUserQuestion.
@@ -181,6 +277,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-003
+date: 2026-08-05
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-05 — ADR-006 Taxonomía de Conocimiento Matemático
 
 **Input**: Solicitud de crear `ADR-006_math_topics` (pendiente #3 de STATUS.md), organizando el conocimiento matemático para clasificar ejercicios, medir progreso, detectar fortalezas/debilidades, permitir itinerarios adaptativos y facilitar generación de contenido IA, con taxonomía jerárquica sin escalado innecesario y rangos de dificultad alineados a edad/rating. Confirmado por AskUserQuestion: alcance de Ingeniería limitado a cálculo mental aplicado.
@@ -189,6 +293,14 @@ estado: done
 
 **Decisión tomada**: taxonomía de 2 niveles (Área → Tema), 5 Áreas y ~20 Temas iniciales, cada uno con `difficultyRange` por `AcademicLevel` como sub-rango de la banda global ya definida en ADR-005 (sin crear escala de dificultad nueva), y `prerequisites` opcional para itinerarios futuros. Regla anti-escalado: un Tema se reutiliza entre niveles, nunca se duplica por nivel.
 
+---
+
+---
+task_id: STATUS-017
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture, security]
+estado: done
 ---
 
 ## 2026-08-06 — Resolución del solape architecture.md / documentation.md (punto 4 de la revisión de skills)
@@ -203,6 +315,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-017
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture, security]
+estado: done
+---
+
 ## 2026-08-06 — Actualización de ejemplos de knowledge-manager.md (punto 5 de la revisión de skills)
 
 **Input**: Actualizar los 7 ejemplos worked-examples de `.ai/skills/knowledge-manager.md`, escritos antes de que existiera código real y desincronizados de lo que sí se construyó esta sesión.
@@ -213,6 +333,14 @@ estado: done
 
 **Output generado**: `.ai/skills/knowledge-manager.md`.
 
+---
+
+---
+task_id: STATUS-019
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture]
+estado: done
 ---
 
 ## 2026-08-06 — Esqueletos de Infrastructure: Database, API, LLM
@@ -227,6 +355,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-020
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Huecos de dominio para UC-002/UC-004 (Exercise.timer, INITIAL_RATING, puertos IdGenerator/Clock)
 
 **Input**: Antes de escribir tests para el primer Caso de Uso completo (`ValidateAnswerUseCase`/`UpdateDifficultyUseCase`, elegidos por el usuario vía AskUserQuestion sobre UC-005/UC-008), se detectaron 3 huecos de materialización al tipar las firmas reales.
@@ -237,6 +373,14 @@ estado: done
 
 **Output generado**: `packages/shared-domain/src/entities/Exercise.ts`, `src/value-objects/Difficulty.ts`, `src/ports/{IdGenerator,Clock,README}.ts/.md`, `src/index.ts` (barrel actualizado).
 
+---
+
+---
+task_id: STATUS-022
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture, test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Huecos de dominio para UC-003/UC-006 (Session.ratingAtStart, puerto HintUsageTracker)
@@ -251,6 +395,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-023
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Catálogo de Temas para UC-005/UC-008 (entidad Tema, TemaRepository)
 
 **Input**: El usuario pidió generar UC-005 (Start Session) y UC-008 (Select Next Exercise) — el último hueco pendiente del set de Casos de Uso, señalado en la iteración anterior: ninguno de los dos podía implementarse sin un puerto para el catálogo de Temas de ADR-006.
@@ -261,6 +413,14 @@ estado: done
 
 **Output generado**: `packages/shared-domain/src/entities/Tema.ts`, `src/repositories/TemaRepository.ts`, `src/index.ts` (barrel actualizado).
 
+---
+
+---
+task_id: STATUS-024
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture, test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — QwenClient real: transporte, validación y alcance (adenda ADR-001)
@@ -275,6 +435,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-025
+date: 2026-08-06
+agentes: [architecture]
+flujo: [architecture]
+estado: done
+---
+
 ## 2026-08-06 — API REST: mapeo de rutas a Controllers
 
 **Input**: El usuario pidió pedirle al Product Agent una User Story para que el backend "genere los endpoints" que el front necesita. Se señaló un desajuste con la metodología propia del proyecto: `docs/user-stories/README.md` dice explícitamente que las User Stories "no incluyen diseño técnico ni de arquitectura — eso es responsabilidad del Architecture Agent", y `.ai/skills/product.md` tiene como restricción "No crear arquitectura". Confirmado con el usuario vía AskUserQuestion: el Architecture Agent define el mapa de rutas, no una User Story nueva.
@@ -285,6 +453,14 @@ estado: done
 
 **Output generado**: `ARCHITECTURE.md` (nueva sección "API REST (Rutas)"), `packages/shared-types/src/dtos/Hint.ts` (`elapsedMs` añadido), `apps/backend-api/src/presentation/http/SessionController.ts` (`userId` añadido a `startSession`). Verificado: `npx turbo run typecheck lint` → 23/23 en verde (solo cambios de contrato/tipos, sin lógica).
 
+---
+
+---
+task_id: STATUS-027
+date: 2026-08-07
+agentes: [architecture]
+flujo: [architecture, test, developer]
+estado: done
 ---
 
 ## 2026-08-07 — Backend real: UC-009/UC-010, puertos de auth, corrección de SEED_RATING_BY_LEVEL
@@ -299,6 +475,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-027
+date: 2026-08-07
+agentes: [architecture]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-07 — Huecos detectados construyendo Controllers reales (IDOR, Session.topic, HintUsageTracker.get, GetUserStatisticsUseCase)
 
 **Input**: continuación directa del backend real — construir los 5 Controllers surgió cuatro huecos más, cada uno al intentar mapear un DTO/flujo ya diseñado contra la implementación real existente.
@@ -311,6 +495,14 @@ estado: done
 
 ---
 
+---
+task_id: STATUS-031
+date: 2026-08-07
+agentes: [architecture]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-07 — Schema físico real: UserCredentials, Session.topic/ratingAtStart, Exercise.timeLimitMs (adenda ADR-013)
 
 **Input**: el usuario eligió como siguiente paso implementar los `Prisma*Repository` reales. Antes de tocar código de repositorio, exploración del estado actual (`database/schema.prisma`, entidades de dominio) detectó que el schema físico se había quedado desactualizado.
@@ -321,6 +513,14 @@ estado: done
 
 **Output generado**: `database/schema.prisma`, `docs/ADR/ADR-013_modelo_datos_fisico.md` (adenda).
 
+---
+
+---
+task_id: STATUS-032
+date: 2026-08-08
+agentes: [architecture]
+flujo: [architecture]
+estado: done
 ---
 
 ## 2026-08-08 — ADR-014 y UC-011: definición del Caso de Uso de RAG (US-008)

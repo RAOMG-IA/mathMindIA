@@ -254,7 +254,9 @@ function statusTaskIds(): Set<string> {
   if (!existsSync(STATUS_FILE)) return new Set()
   const text = readFileSync(STATUS_FILE, 'utf8')
   const ids = new Set<string>()
-  for (const m of text.matchAll(/#(\d{1,4})\b/g)) ids.add(`STATUS-${m[1]}`)
+  // El front-matter normaliza task_id a 3 dígitos (STATUS-020), igual que STATUS.md cuando escribe "STATUS-020".
+  // Referencias sueltas "#20" se normalizan igual; 1-3 dígitos descarta falsos positivos tipo "#4828" (URLs).
+  for (const m of text.matchAll(/#(\d{1,3})\b/g)) ids.add(`STATUS-${m[1].padStart(3, '0')}`)
   return ids
 }
 

@@ -3,6 +3,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-050
+date: 2026-08-10
+agentes: [developer]
+flujo: [developer]
+estado: done
+---
+
 ## 2026-08-10 — Background base en `HomeScreen`
 
 **Input**: el usuario pidió añadir el background base a la pantalla Home — corrige la decisión anterior (misma sesión) de dejar `HomeScreen` sin `BackgroundGrid`/`ParticleField` propio.
@@ -11,6 +19,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `HomeScreen.tsx` actualizado. `npx turbo run typecheck lint test` → en verde, 46/46 tests en `mobile-app` (sin cambios de cantidad — cambio visual). Verificado con bundle real (`expo export --platform web`, sin errores).
 
+---
+
+---
+task_id: STATUS-049
+date: 2026-08-10
+agentes: [developer]
+flujo: [developer]
+estado: done
 ---
 
 ## 2026-08-10 — Scroll formal al diseño de la app (`global.css` + `indicatorStyle`)
@@ -25,6 +41,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-048
+date: 2026-08-10
+agentes: [developer]
+flujo: [developer]
+estado: done
+---
+
 ## 2026-08-10 — `Checkbox`/`Combobox` genéricos (TDD Red→Green), `HomeScreen` usa `Combobox` para Tema
 
 **Input**: el usuario pidió un Combobox reutilizable para listar Temas, con un atributo `multi-select` (uno o varios items) y un checkbox de "seleccionar/deseleccionar todos" marcado a `true` por defecto para Temas, más un Checkbox personalizado para las filas. Aclarado antes de implementar (`AskUserQuestion`): eso contradice directamente US-003 ("se asume un tema por sesión", multi-tema explícitamente fuera de alcance) y `StartSessionRequestDto.topic` (un único `TemaCode`, no un array). El usuario eligió: construir `Combobox`/`Checkbox` como componentes genéricos reutilizables de verdad (con soporte real de `multiSelect`), pero `HomeScreen` sigue usándolo en modo single-select — sin tocar US-003 ni el backend.
@@ -37,6 +61,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `src/components/Checkbox/{Checkbox.tsx,Checkbox.styles.ts,index.ts}`, `src/components/Combobox/{Combobox.tsx,Combobox.styles.ts,Combobox.logic.ts,Combobox.logic.test.ts,index.ts}`, `src/components/index.ts` actualizado, `src/screens/HomeScreen.tsx`/`.styles.ts` actualizados. 8/8 tests nuevos (`Combobox.logic.test.ts`). `npx turbo run typecheck lint test` → en verde (46/46 tests en `mobile-app`, antes 38). Verificado con bundle real (`expo export --platform web`, sin errores) servido junto al `backend-api` real.
 
+---
+
+---
+task_id: STATUS-047
+date: 2026-08-10
+agentes: [developer]
+flujo: [architecture, developer, security]
+estado: done
 ---
 
 ## 2026-08-10 — CORS con allowlist (`CORS_ALLOWED_ORIGINS`, TDD Red→Green)
@@ -57,6 +89,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-046
+date: 2026-08-10
+agentes: [developer]
+flujo: [architecture, developer, security]
+estado: done
+---
+
 ## 2026-08-10 — `GET /temas` (backend, TDD Red→Green) + `(app)/home.tsx` (US-003)
 
 **Input**: continuación tras la adenda de Architecture (ver `.ai/prompts/architecture.md`) que resuelve el hueco del catálogo de Temas. El usuario eligió la opción de endpoint real; esta entrada implementa ambas mitades (backend nuevo + pantalla que lo consume).
@@ -75,6 +115,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-045
+date: 2026-08-10
+agentes: [developer]
+flujo: [developer, security]
+estado: done
+---
+
 ## 2026-08-10 — `app/(app)/_layout.tsx`: guard de autenticación + header global (TDD Red→Green)
 
 **Input**: el usuario pidió continuar con la siguiente pantalla de `mobile-app`; consultado por `AskUserQuestion` sobre cuál construir primero de las cuatro restantes (Home/Ejercicio/Resumen/Estadísticas), eligió el guard/header de `(app)` por ser prerrequisito de las cuatro (ADR-015).
@@ -87,6 +135,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `src/store/sessionRouting.ts`+`.test.ts` (nuevo), `src/components/AppHeader/{AppHeader.tsx,AppHeader.styles.ts,index.ts}` (nuevo), `src/components/index.ts` actualizado, `app/_layout.tsx` (hidratación cableada), `app/(app)/_layout.tsx` (nuevo), `app/index.tsx` (deja de ser placeholder). 3/3 tests nuevos, `npx turbo run typecheck lint test` → 32/32 en verde (29/29 tests en `mobile-app`, antes 26). Verificado con bundle real (`expo start --web`, 1263 módulos, sin errores) y `curl` 200 en `/`, `/login`, `/register`.
 
+---
+
+---
+task_id: STATUS-044
+date: 2026-08-09
+agentes: [developer]
+flujo: [developer]
+estado: done
 ---
 
 ## 2026-08-09 — `EmailInput`/`PasswordInput`: componentes de input compartidos, sustituidos en Login/Register
@@ -107,6 +163,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-043
+date: 2026-08-09
+agentes: [developer]
+flujo: [test, developer]
+estado: done
+---
+
 ## 2026-08-09 — RegisterScreen (US-001): validador, pantalla real (TDD Green)
 
 **Input**: Red confirmado de `RegisterScreen.validation.test.ts` (Test Agent, fase previa, misma sesión).
@@ -123,6 +187,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-042
+date: 2026-08-09
+agentes: [developer]
+flujo: [developer]
+estado: done
+---
+
 ## 2026-08-09 — LoginScreen: refinamientos de diseño (caja, fondo, registro, recuperar contraseña)
 
 **Input**: El usuario probó `LoginScreen` en el navegador (`npx expo start --web`, primera vez que se arranca el servidor real, no solo `expo export`) y pidió, en la misma sesión: formulario en caja centrada, fondo de partículas del `NeuralLoader` también aquí, botón "Registrarse" arriba a la derecha, enlace de "recuperar contraseña" bajo el botón de enviar.
@@ -135,6 +207,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `LoginScreen.tsx`/`.styles.ts` actualizados. `app/_layout.tsx`, `NeuralLoader/index.ts`, `src/components/index.ts` actualizados. `ParticleField.tsx`/`StatusPill.tsx` (fix `pointerEvents`). `apps/mobile-app/.gitignore` (nuevo), `tsconfig.json` actualizado. Sin test automático (UI visual, mismo criterio que el resto de la sesión). `npx turbo run typecheck lint test` → 32/32 en verde. Verificado en navegador real (`http://localhost:8081/login`).
 
+---
+
+---
+task_id: STATUS-040
+date: 2026-08-09
+agentes: [developer]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-09 — LoginScreen (US-002): validadores, refactor de RegisterUseCase, pantalla real
@@ -155,6 +235,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-039
+date: 2026-08-09
+agentes: [developer]
+flujo: [developer]
+estado: done
+---
+
 ## 2026-08-09 — Componente `NeuralLoader` (UI pura, sin ciclo TDD)
 
 **Input**: "implementa el componente" — tras dos rondas de iteración visual sobre un prototipo HTML/CSS/SVG publicado como Artifact (spec de diseño exacta aportada por el usuario; corrección de geometría del cráneo/cerebro; integración del SVG real de cráneo/cerebro aportado por el usuario), el usuario aprobó el diseño y pidió el componente React Native real.
@@ -169,6 +257,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-038
+date: 2026-08-09
+agentes: [developer]
+flujo: [test, developer]
+estado: done
+---
+
 ## 2026-08-09 — invalidateStatisticsOnSessionStart (TDD Green) + wiring en useStartSession
 
 **Input**: Red confirmado de `useSession.test.ts` (Test Agent, fase previa, misma sesión).
@@ -179,6 +275,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `apps/mobile-app/src/api/hooks/useSession.ts` actualizado. README de `src/api` actualizado. 1/1 test verde (el ya confirmado en Red), `npx turbo run typecheck lint test` → 31/31 en verde (17/17 tests en `mobile-app`, antes 16).
 
+---
+
+---
+task_id: STATUS-037
+date: 2026-08-09
+agentes: [developer]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-09 — src/api completo: requests + hooks de TanStack Query (TDD Green + wiring)
@@ -193,6 +297,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-036
+date: 2026-08-09
+agentes: [developer]
+flujo: [developer]
+estado: done
+---
+
 ## 2026-08-09 — Implementaciones reales de TokenStorage
 
 **Input**: "implementa TokenStorage" — el usuario pidió cerrar el hueco que la entrada anterior dejaba explícito (puerto + fake de test, sin implementaciones reales).
@@ -203,6 +315,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `expo-secure-store` instalado (`npm install --workspace=apps/mobile-app`, resuelto a `^57.0.1`). `SecureStoreTokenStorage.ts`, `WebTokenStorage.ts`, `createTokenStorage.ts`. README de `src/store` actualizado. `npx turbo run typecheck lint test` → 31/31 en verde (9/9 tests existentes sin cambios, nada nuevo que testear).
 
+---
+
+---
+task_id: STATUS-035
+date: 2026-08-09
+agentes: [developer]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-09 — Implementación de useSessionStore + fetchClient (TDD Green)
@@ -219,6 +339,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-016
+date: 2026-08-06
+agentes: [developer]
+flujo: [test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Implementación de computeNextDifficulty (TDD Green)
 
 **Input**: Confirmación del usuario para implementar `computeNextDifficulty` tras el Red de 8/8 tests fallidos (Test Agent, fase previa). Primera activación del Developer Agent en el proyecto.
@@ -233,6 +361,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-020
+date: 2026-08-06
+agentes: [developer]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Implementación de UpdateDifficultyUseCase y ValidateAnswerUseCase (TDD Green)
 
 **Input**: Confirmación del usuario ("si") para implementar tras el Red de 8/8 tests fallidos (Test Agent, fase previa). Primer Caso de Uso de Application completo del proyecto.
@@ -243,6 +379,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `apps/backend-api/src/application/use-cases/{UpdateDifficultyUseCase,ValidateAnswerUseCase}.ts` (implementación completa, reemplaza el `declare class` de la fase Red). Verificado: `vitest run` → **8/8 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 30/30 tareas en verde en todo el monorepo.
 
+---
+
+---
+task_id: STATUS-021
+date: 2026-08-06
+agentes: [developer]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Implementación de GetUserStatisticsUseCase (TDD Green)
@@ -257,6 +401,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-022
+date: 2026-08-06
+agentes: [developer]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Implementación de EndSessionUseCase y GenerateHintUseCase (TDD Green)
 
 **Input**: Continuación sin pausa tras el Red de 10/10 tests fallidos (Test Agent, fase previa) — mismo patrón de delegación que las iteraciones anteriores.
@@ -267,6 +419,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `apps/backend-api/src/application/use-cases/{EndSessionUseCase,GenerateHintUseCase}.ts` (implementación completa). Verificado: `vitest run` → **10/10 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 30/30 tareas en verde en todo el monorepo, 21/21 tests en `backend-api` (5 Casos de Uso ya implementados).
 
+---
+
+---
+task_id: STATUS-023
+date: 2026-08-06
+agentes: [developer]
+flujo: [architecture, test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Implementación de SelectNextExerciseUseCase y StartSessionUseCase (TDD Green)
@@ -281,6 +441,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-024
+date: 2026-08-06
+agentes: [developer]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Implementación de QwenClient, LangChainQwenModel y QwenHintGenerator (TDD Green)
 
 **Input**: Continuación sin pausa tras el Red de 7/7 tests fallidos (Test Agent, fase previa). Primera pieza de Infrastructure con implementación real (no `declare class`) del proyecto.
@@ -291,6 +459,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `apps/ai-engine/src/llm/{QwenClient,LangChainQwenModel}.ts`, `apps/ai-engine/src/index.ts`, `apps/backend-api/src/infrastructure/ai/QwenHintGenerator.ts` (implementación completa). Verificado: `vitest run` → **7/7 tests en verde** (primer intento). `npx turbo run typecheck lint test`: 31/31 tareas en verde en todo el monorepo, 5/5 tests en `ai-engine`, 35/35 tests en `backend-api`.
 
+---
+
+---
+task_id: STATUS-026
+date: 2026-08-06
+agentes: [developer]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Implementación de GenerateExerciseBatchUseCase (UC-001, TDD Green)
@@ -305,6 +481,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-027
+date: 2026-08-07
+agentes: [developer]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-07 — Backend real completo: RegisterUseCase/LoginUseCase, 5 Controllers, auth, Express, verificación manual end-to-end
 
 **Input**: continuación sin pausa a través de todos los Red de la sesión "comenzamos con el backend" — el usuario delegó el ciclo completo, mismo patrón que iteraciones anteriores.
@@ -317,6 +501,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-028
+date: 2026-08-07
+agentes: [developer]
+flujo: [developer, reviewer, security, documentation]
+estado: done
+---
+
 ## 2026-08-07 — Corrección de los 3 hallazgos de Security (fuga de mensajes, política de contraseña, algoritmo JWT)
 
 **Input**: el usuario señaló que Reviewer y Security nunca se habían ejecutado como fases del flujo. Pasadas retroactivas de ambos (ver `.ai/prompts/{reviewer,security}.md`) confirmaron 3 hallazgos de Security sobre el código de autenticación; corregidos aquí con TDD.
@@ -325,6 +517,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Decisión tomada**: (1) nuevo `errorMapping.ts` — función pura `mapUseCaseError(error, exposeMessage)`, testeada de verdad (a diferencia de `routes.ts`, que sigue siendo wiring sin tests): `exposeMessage=false` colapsa cualquier error a un mensaje genérico + 403, usado en `/sessions/end`, `/answers`, `/hints` (las tres rutas cuyos Casos de Uso verifican propiedad de una `Session`); `exposeMessage=true` mantiene el comportamiento anterior donde el mensaje es contenido de producto pretendido (registro, login, iniciar sesión, estadísticas). (2) `RegisterUseCase`: `MIN_PASSWORD_LENGTH=8` (OWASP ASVS L1), verificado antes de tocar cualquier repositorio — tests existentes con contraseñas de 1 carácter actualizados a 8+. (3) `JwtTokenIssuer.verify`: `algorithms: ['HS256']` explícito — confirmado con un test que jsonwebtoken ya rechazaba `alg=none` incluso sin el fix (defensa en profundidad, no corrección de una vulnerabilidad explotable hoy).
 
+---
+
+---
+task_id: STATUS-031
+date: 2026-08-07
+agentes: [developer]
+flujo: [architecture, test, developer]
+estado: done
 ---
 
 ## 2026-08-07 — Prisma*Repository real (6 clases, TDD Green) + wiring de main.ts
@@ -351,6 +551,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-033
+date: 2026-08-08
+agentes: [developer]
+flujo: [test, developer]
+estado: done
+---
+
 ## 2026-08-08 — UC-011 (RAG) implementado: Caso de Uso + 4 adaptadores + retrieval en UC-001/UC-003 + script de ingesta
 
 **Input**: continuación sin pausa tras el Red de Test Agent. Implementar `IngestKnowledgeBaseUseCase`, sus 4 adaptadores reales, cablear retrieval en `GenerateExerciseBatchUseCase`/`QwenHintGenerator`, y el script de disparo.
@@ -373,6 +581,14 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 **Output generado**: `packages/shared-domain/src/{ports/{Embedder,KnowledgeBaseIndex,IngestionFileSystem}.ts,repositories/RagIngestionRepository.ts,entities/RagIngestionRecord.ts,value-objects/RagIngestionStatus.ts}`, `apps/ai-engine/src/rag/IngestKnowledgeBaseUseCase.ts`, `apps/backend-api/src/infrastructure/rag/{NodeIngestionFileSystem,XenovaEmbedder,PostgresKnowledgeBaseIndex}.ts`, `apps/backend-api/src/infrastructure/repositories/PrismaRagIngestionRepository.ts`, `apps/backend-api/src/scripts/ingestKnowledgeBase.ts`, `apps/ai-engine/src/prompts/{GenerateExercise,GenerateHint}.ts` (campo `context`), `apps/ai-engine/src/batch/GenerateExerciseBatchUseCase.ts`, `apps/backend-api/src/infrastructure/ai/QwenHintGenerator.ts`, `apps/backend-api/src/presentation/main.ts`, `database/schema.prisma` (RagChunk rediseñado). Verificado: `npx turbo run typecheck lint test` → **31/31 en verde** (79 tests `backend-api` sin cambios de cantidad, 15 `ai-engine` — antes 10). `npm run test:integration` → **27/31 en verde**, 4 fallos documentados (bloqueo pgvector, no bug).
 
+---
+
+---
+task_id: STATUS-033
+date: 2026-08-08
+agentes: [developer]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-08 — Cierre de UC-011: pgvector instalado, RAG verificado end-to-end con datos reales

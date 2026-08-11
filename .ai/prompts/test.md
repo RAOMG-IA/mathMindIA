@@ -3,6 +3,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-043
+date: 2026-08-09
+agentes: [test]
+flujo: [test, developer]
+estado: done
+---
+
 ## 2026-08-09 — Test de validateRegisterForm (TDD Red)
 
 **Input**: "comenzamos con la definicion de la siguiente pantalla 'Registro'" — segunda pantalla real de `mobile-app`, US-001.
@@ -13,6 +21,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 **Output generado**: `apps/mobile-app/src/screens/RegisterScreen.validation.test.ts`. Verificado: `vitest run` → **falla con "Failed to load url ./RegisterScreen.validation... Does the file exist?"** — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión.
 
+---
+
+---
+task_id: STATUS-040
+date: 2026-08-09
+agentes: [test]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-09 — Tests de shared-utils (email/password) y LoginScreen.validation (TDD Red)
@@ -27,6 +43,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-038
+date: 2026-08-09
+agentes: [test]
+flujo: [test, developer]
+estado: done
+---
+
 ## 2026-08-09 — Test de invalidateStatisticsOnSessionStart (TDD Red)
 
 **Input**: "implementa la funcionalida de tankstack invalidateQueries para limpiar la cache cuando el usuario cambie de nivel o cambie el modo de juego".
@@ -37,6 +61,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 **Output generado**: `apps/mobile-app/src/api/hooks/useSession.test.ts`. Verificado: `vitest run` → **falla con `TypeError: invalidateStatisticsOnSessionStart is not a function`** — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión.
 
+---
+
+---
+task_id: STATUS-037
+date: 2026-08-09
+agentes: [test]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-09 — Tests de las funciones de request de src/api (TDD Red)
@@ -51,6 +83,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-035
+date: 2026-08-09
+agentes: [test]
+flujo: [test, developer]
+estado: done
+---
+
 ## 2026-08-09 — Tests de useSessionStore + fetchClient (TDD Red)
 
 **Input**: "no, comenzamos" — el usuario dio luz verde a implementar lo diseñado en [ADR-015](../../docs/ADR/ADR-015_mobile_app_screens.md), primera pieza real de `mobile-app` de toda la sesión.
@@ -61,6 +101,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 **Output generado**: ambos ficheros de test. Verificado: `vitest run` → **ambos módulos fallan con "Failed to load url ... Does the file exist?"** (los módulos `useSessionStore.ts`/`fetchClient.ts` no existen todavía) — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión, sin pausa — el usuario ya había dado luz verde a todo el ciclo.
 
+---
+
+---
+task_id: STATUS-015
+date: 2026-08-06
+agentes: [test]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Tests de AdaptiveDifficultyEngine (TDD Red)
@@ -75,6 +123,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-020
+date: 2026-08-06
+agentes: [test]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Tests de UpdateDifficultyUseCase y ValidateAnswerUseCase (TDD Red)
 
 **Input**: Primer Caso de Uso de Application del proyecto. El usuario eligió UC-002 `ValidateAnswerUseCase` (invoca UC-004 `UpdateDifficultyUseCase`) sobre UC-005/UC-008 vía AskUserQuestion, por ser UC-004 un wrapper fino sobre `computeNextDifficulty` ya implementado y testeado.
@@ -85,6 +141,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 **Output generado**: `apps/backend-api/src/application/use-cases/{UpdateDifficultyUseCase,ValidateAnswerUseCase}.ts` (declare class) + `.test.ts` (8 tests), `packages/shared-testing/src/mocks/*.ts` + `src/index.ts` (barrel, antes vacío). Verificado: `turbo typecheck` en verde; `vitest run` → **8/8 tests fallan con `TypeError: ... is not a constructor`** — Red confirmado por la razón correcta. Confirmación del usuario ("si") obtenida antes de pasar a Green.
 
+---
+
+---
+task_id: STATUS-021
+date: 2026-08-06
+agentes: [test]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Tests de GetUserStatisticsUseCase (TDD Red)
@@ -99,6 +163,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-022
+date: 2026-08-06
+agentes: [test]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Tests de EndSessionUseCase y GenerateHintUseCase (TDD Red)
 
 **Input**: "avanza con UC3 y UC6" — el usuario pide desbloquear explícitamente los dos Casos de Uso descartados en la iteración anterior por huecos de diseño, en vez de seguir difiriéndolos.
@@ -109,6 +181,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 **Output generado**: `apps/backend-api/src/application/use-cases/{EndSessionUseCase,GenerateHintUseCase}.ts` (declare class) + `.test.ts` (10 tests). Verificado: `turbo typecheck` en verde; `vitest run` → **10/10 tests fallan con `TypeError: ... is not a constructor`** — Red confirmado por la razón correcta.
 
+---
+
+---
+task_id: STATUS-023
+date: 2026-08-06
+agentes: [test]
+flujo: [architecture, test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Tests de SelectNextExerciseUseCase y StartSessionUseCase (TDD Red)
@@ -123,6 +203,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-024
+date: 2026-08-06
+agentes: [test]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-06 — Tests de QwenClient y QwenHintGenerator (TDD Red)
 
 **Input**: Primera implementación real de Infrastructure (no esqueleto) del proyecto. Decisiones ya confirmadas (ver `architecture.md`): import in-process, Zod, alcance QwenClient+adaptador.
@@ -133,6 +221,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 **Output generado**: `apps/ai-engine/src/llm/{ChatModel,QwenClient}.ts` (declare class QwenClient) + `QwenClient.test.ts` (5 tests); `apps/backend-api/src/infrastructure/ai/QwenHintGenerator.ts` (declare class) + `.test.ts` (2 tests); `GenerateHintUseCase.ts`/`.test.ts` actualizados. Verificado: `turbo typecheck` en verde; `vitest run` → **7/7 tests fallan por la razón correcta** (`QwenClient`/`QwenHintGenerator is not a constructor`) — Red confirmado.
 
+---
+
+---
+task_id: STATUS-026
+date: 2026-08-06
+agentes: [test]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-06 — Tests de GenerateExerciseBatchUseCase (UC-001, TDD Red)
@@ -147,6 +243,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-027
+date: 2026-08-07
+agentes: [test]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-07 — Tests del backend real: IDOR, RegisterUseCase/LoginUseCase, 5 Controllers, adaptadores de auth, authMiddleware
 
 **Input**: "comenzamos con el backend" — sesión larga con múltiples ciclos TDD encadenados, cada uno cerrando un hueco detectado por el anterior (ver `architecture.md`, dos entradas 2026-08-07).
@@ -159,6 +263,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 ---
 
+---
+task_id: STATUS-031
+date: 2026-08-07
+agentes: [test]
+flujo: [architecture, test, developer]
+estado: done
+---
+
 ## 2026-08-07 — Tests de integración reales de los 6 Prisma*Repository (TDD Red)
 
 **Input**: el usuario eligió "Prisma*Repository real" como siguiente paso tras el informe de avance. Decisión previa confirmada vía AskUserQuestion: tests de integración reales (no gap aceptado como `LangChainQwenModel`), sin Docker (entorno mono-servidor), contra el `DATABASE_URL` real de `.env`.
@@ -167,6 +279,14 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 
 **Decisión tomada**: `vitest.integration.config.ts` — proyecto Vitest separado (`include: ['**/*.integration.test.ts']`), excluido explícitamente de `vitest.config.ts` (`exclude`) para que `turbo run test`/`npm test` sigan sin tocar la base de datos. Script `test:integration`, deliberadamente fuera de `turbo.json` (mismo criterio que mantener `LangChainQwenModel` fuera del `test` por defecto: no depender de un recurso externo). Un `.integration.test.ts` por repositorio (23 tests): cada uno crea sus propios ids únicos (`crypto.randomUUID()`) y limpia exactamente lo que creó en `afterEach` (mismo Postgres de desarrollo, sin base de datos separada, tal como pidió el usuario) — no usa `TRUNCATE` para no arrastrar datos reales. Casos cubiertos: round-trip completo, `null` si no existe, semántica upsert (`save` dos veces no duplica), `findByDifficultyBand` (igualdad + rango), `findByExerciseIdAndOrder` (clave compuesta), `findByUserId` de `Answer` (columna desnormalizada, sin JOIN).
 
+---
+
+---
+task_id: STATUS-033
+date: 2026-08-08
+agentes: [test]
+flujo: [test, developer]
+estado: done
 ---
 
 ## 2026-08-08 — Tests de UC-011 (RAG): IngestKnowledgeBaseUseCase (Red con fakes) + adaptadores reales (Red de integración, 2 bloqueados por pgvector)
