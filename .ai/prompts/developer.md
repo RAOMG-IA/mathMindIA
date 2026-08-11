@@ -3,6 +3,30 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-11 — `SessionSummaryScreen` (US-006-resultado)
+
+**Input**: el usuario pidió proponer la siguiente pantalla. Detectado (no pedido explícitamente) que `SessionScreen.handleFinish` ya navegaba a `/(app)/session/[sessionId]/summary` — ruta inexistente, enlace roto ahora mismo en la app — y que el resumen (`EndSessionResponseDto`) ya llegaba sembrado en caché de TanStack Query esperando un consumidor. Propuesto vía `AskUserQuestion` frente a la alternativa de construir Estadísticas (US-007) primero; el usuario confirmó Resumen de Sesión.
+
+**Decisión tomada**: `SessionSummaryScreen.format.ts` aísla el formateo puro (`computeAccuracyPercent`/`formatAvgResponseTime`/`formatRatingChange`), testeado por TDD sin depender de React/RN, mismo criterio que `SessionScreen.timer.ts`. `computeAccuracyPercent` devuelve `null` con `totalAttempts=0` en vez de `NaN`/dividir entre cero — la pantalla distingue explícitamente "sin intentos" de "0% de aciertos" (US-006, escenario "Sesión sin ejercicios respondidos"). La pantalla lee el resumen con `useQuery({ queryKey: queryKeys.sessionSummary(sessionId), queryFn: skipToken })` (API de TanStack Query v5 para suscribirse a una entrada de caché sin `queryFn` real) en vez de una lectura imperativa (`queryClient.getQueryData`) fuera del sistema de queries — mantiene el mismo patrón "server state via TanStack Query" ya fijado en ADR-015. Sin resumen en caché (entrada directa por URL, recarga de página) → redirige a Home, mismo criterio que `SessionScreen` ante un `sessionId` sin sesión activa en el store. Fondo `BackgroundGrid`+`ParticleField` (sin Modal en esta pantalla) — mismo patrón que Login/Register, a diferencia de Home/Session que omiten `ParticleField` por el `Modal` del `Combobox`.
+
+**Hallazgo real, ajeno a la pantalla en sí**: `useEndSession` nunca invalidaba `queryKeys.statistics` tras finalizar. El score/rating cambian con cada `Answer` registrada durante la sesión (ADR-005), pero nada disparaba una revalidación al terminar — `AppHeader`/Home seguían mostrando el rating de antes de la sesión hasta la siguiente recarga completa de la app. Se hizo visible precisamente al construir esta pantalla (que muestra el `ratingChange` exacto de la sesión, sin que se reflejara en ningún otro sitio). Añadida `invalidateStatisticsOnSessionEnd` en `useSession.ts`, mismo patrón ya existente que `invalidateStatisticsOnSessionStart` (función pura extraída, testeada con un `QueryClient` real y un spy, sin renderizar componentes).
+
+**Output generado**: `src/screens/SessionSummaryScreen.{tsx,styles.ts,format.ts,format.test.ts}` (nuevos), `app/(app)/session/[sessionId]/summary.tsx` (nuevo, coexiste con el archivo `session/[sessionId].tsx` ya existente sin conflicto de Expo Router), `src/api/hooks/useSession.ts`/`.test.ts` (`invalidateStatisticsOnSessionEnd`), `src/screens/SessionScreen.tsx`/`src/api/queryKeys.ts` (comentarios actualizados, la ruta ya no es "pendiente"). 9 tests nuevos en `format.test.ts` + 1 en `useSession.test.ts`. `npx tsc --noEmit`/`eslint` limpio, `vitest run` → 18/18 archivos, 71/71 tests en `mobile-app` (antes 61). Verificado con bundle real (`expo export --platform web`, sin errores) sirviendo el bundle nuevo.
+
+---
+
+## 2026-08-11 — Rename `QwenClient` → `IAClient`
+
+**Input**: el usuario pidió renombrar `QwenClient`/`QwenClient.test` y sus referencias a `IAClient`, "para ser agnóstico al motor como habíamos decidido en sesiones anteriores" — el propio código ya documentaba esto como pendiente (`IAClient.ts` antiguo: "nombre historico Qwen, ver ADR-001 -- en la practica agnostico de proveedor").
+
+**Decisión tomada**: `git mv` de `QwenClient.ts`/`.test.ts` → `IAClient.ts`/`.test.ts` (preserva historial de git). Clase `QwenClient` → `IAClient`. Parámetro de constructor `qwen` → `ia` en `GenerateExerciseBatchUseCase` y `QwenHintGenerator` (mismo criterio: el nombre de una referencia también es una referencia). Actualizadas todas las referencias vivas en código real: imports/tipos (`Pick<IAClient, ...>`), barrel export de `ai-engine/src/index.ts`, instanciación en `main.ts`/`generateExerciseBatch.ts`, y los README.md que describen la arquitectura actual (`llm/README.md`, `batch/README.md`, `prompts/README.md`, `infrastructure/ai/README.md`).
+
+**Alcance, deliberadamente acotado**: `QwenHintGenerator` (clase de `backend-api`) no se renombra — el usuario pidió específicamente "QwenClient", una clase distinta; renombrar también esa habría sido asumir alcance no pedido. Tampoco se tocan los logs históricos fechados (`docs/STATUS.md`, `.ai/prompts/*.md`, `docs/ADR-001_LenguajesMetodologias.md`) — son registros de decisiones en el tiempo, reescribirlos para que digan "IAClient" en frases que describen lo que era cierto entonces falsearía la historia (mismo criterio ya aplicado a otros ADRs con "Adenda" fechada en vez de edición directa).
+
+**Output generado**: 16 ficheros (`ai-engine`: `IAClient.ts`/`.test.ts` renombrados, `GenerateExerciseBatchUseCase.ts`/`.test.ts`, `index.ts`, `ChatModel.ts`, `prompts/GenerateHint.ts`, 3 README.md; `backend-api`: `GenerateHintUseCase.ts`, `QwenHintGenerator.ts`/`.test.ts`, `main.ts`, `scripts/generateExerciseBatch.ts`, `infrastructure/ai/README.md`). Sin cambios de comportamiento. `ai-engine` 17/17 tests, `backend-api` 91/91 tests (sin cambios de cantidad en ninguno), `tsc --noEmit`/`eslint` limpios en ambos. Verificado con el backend en caliente (`tsx watch`, recarga en vivo del archivo), sigue respondiendo (`GET /temas` → 401 sin token, igual que antes) tras el rename.
+
+---
+
 ## 2026-08-11 — Fix: sesión de cliente no se invalidaba ante un 401
 
 **Input**: el usuario pidió arrancar el servicio para validar funcionalidad. Al reiniciar `backend-api` se descubrió `JWT_SECRET` completamente ausente de `.env` (el servidor no arrancaba) — corregido generando un secreto de desarrollo. Tras arrancar, el usuario reportó que Home mostraba el nivel académico correcto pero ningún Tema cargado.

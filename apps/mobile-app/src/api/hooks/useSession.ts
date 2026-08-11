@@ -13,6 +13,15 @@ export function invalidateStatisticsOnSessionStart(queryClient: QueryClient): vo
   void queryClient.invalidateQueries({ queryKey: queryKeys.statistics })
 }
 
+// Mismo motivo que invalidateStatisticsOnSessionStart: score/rating cambian con cada Answer
+// registrada durante la sesion (ADR-005), pero nada invalidaba `statistics` al terminar --
+// AppHeader/Home seguian mostrando el rating de antes de la sesion hasta la siguiente recarga.
+// Detectado al construir SessionSummaryScreen (US-006-resultado), que muestra el ratingChange
+// exacto de esta sesion -- sin esto, ese cambio no se reflejaba en ningun otro sitio de la app.
+export function invalidateStatisticsOnSessionEnd(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.statistics })
+}
+
 // Wiring puro, sin test automatico -- ver nota en useAuth.ts.
 export function useStartSession() {
   const queryClient = useQueryClient()
@@ -26,5 +35,12 @@ export function useStartSession() {
 }
 
 export function useEndSession() {
-  return useMutation({ mutationFn: endSessionRequest })
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: endSessionRequest,
+    onSuccess: () => {
+      invalidateStatisticsOnSessionEnd(queryClient)
+    },
+  })
 }

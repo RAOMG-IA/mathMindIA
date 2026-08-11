@@ -220,8 +220,8 @@ export function SessionScreen({ sessionId }: SessionScreenProps) {
         onSuccess: (data) => {
           queryClient.setQueryData(queryKeys.sessionSummary(sessionId), data)
           clear()
-          // (app)/session/[sessionId]/summary todavia no existe (siguiente pantalla pendiente).
-          // @ts-expect-error -- ruta real pendiente de construir
+          // Tipos de rutas desactualizados en este entorno -- ver comentario en HomeScreen.tsx.
+          // @ts-expect-error -- tipos de rutas desactualizados, no la ruta en si (ya existe)
           router.replace(`/(app)/session/${sessionId}/summary`)
         },
       },

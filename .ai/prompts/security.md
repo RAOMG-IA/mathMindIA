@@ -3,6 +3,21 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+## 2026-08-11 — Revisión: `SessionSummaryScreen`
+
+**Contexto utilizado**: `apps/mobile-app/src/screens/SessionSummaryScreen.tsx`, `EndSessionUseCase.ts` (autorización ya cubierta en una revisión anterior), `queryKeys.ts`.
+
+**Hallazgos**:
+1. **Sin superficie HTTP nueva**: la pantalla no llama a ningún endpoint — lee un `EndSessionResponseDto` ya recibido y validado por `POST /sessions/end` (autorizado contra `session.userId`, revisión previa), sembrado en caché de cliente por `SessionScreen`. No hay forma de que un usuario vea el resumen de una sesión ajena: la clave de caché (`sessionSummary(sessionId)`) solo se puebla localmente tras una respuesta 200 legítima de su propia sesión.
+2. **Caché sin expiración explícita**: el resumen queda en la caché de TanStack Query indefinidamente (sin `gcTime` acotado) hasta que la pestaña se cierra o recarga. No es sensible más allá de lo que ya era visible al usuario en pantalla (aciertos/tiempos/rating de su propia sesión) — sin severidad, no bloqueante.
+3. **Sin secretos ni dependencias nuevas.**
+
+**Decisión tomada**: sin cambios de código. Ningún hallazgo crítico ni bloqueante.
+
+**Output generado**: esta entrada.
+
+---
+
 ## 2026-08-11 — Fix: sesión de cliente no se invalidaba ante un 401
 
 **Contexto utilizado**: `apps/mobile-app/src/api/fetchClient.ts`, `useSessionStore.ts`, `(app)/_layout.tsx`, hueco ya señalado en la revisión de `session/[sessionId].tsx` (2026-08-11, punto 6) y en memoria del proyecto.
