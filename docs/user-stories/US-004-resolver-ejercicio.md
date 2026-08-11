@@ -36,9 +36,16 @@ Scenario: Se agota el tiempo sin responder
   When el tiempo se agota sin que el usuario responda
   Then el sistema registra el intento como incorrecto
   And la racha de aciertos se resetea a cero
+  And muestra la explicación de la solución correcta
+
+Scenario: Nota de cálculo mental en Modo Test
+  Given una sesión activa en Modo Test con un ejercicio mostrado
+  When el usuario ve el ejercicio
+  Then el sistema muestra una nota orientativa sobre técnicas de cálculo mental
+  And esa nota no depende del enunciado del ejercicio ni se genera por IA
 ```
 
 ## Fuera de alcance
 
 - Fórmulas exactas de actualización de dificultad — ya definidas en [ADR-005](../ADR/ADR-005-adaptive-difficulty-engine.md), no se repiten aquí.
-- Sistema de pistas — cubierto por [US-005](US-005-solicitar-pista.md).
+- Sistema de pistas — cubierto por [US-005](US-005-solicitar-pista.md). La nota de cálculo mental de Modo Test tampoco es una pista (US-005 sigue reservando pistas a Modo Resolución) — es contenido genérico y constante, no progresivo ni ligado al ejercicio.

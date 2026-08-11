@@ -28,9 +28,17 @@ Scenario: Modo Test no ofrece pistas
   When se agota el tiempo de un ejercicio
   Then el sistema no ofrece ninguna pista
   And muestra directamente la explicación de la solución
+
+Scenario: Rendirse y ver la solución en Modo Resolución
+  Given una sesión activa en Modo Resolución con un ejercicio sin responder
+  When el usuario pulsa "Resolver", en cualquier momento (con o sin tiempo agotado)
+  Then el sistema registra el intento como incorrecto
+  And la racha de aciertos se resetea a cero
+  And muestra la explicación de la solución correcta
 ```
 
 ## Fuera de alcance
 
 - Número máximo de pistas por ejercicio — se define al implementar, no es parte de esta historia.
 - Contenido/calidad de las pistas generadas por IA — responsabilidad del `ai-engine`, fuera del alcance de una historia de producto.
+- "Resolver" no es una pista adicional ni genera contenido nuevo por IA — reutiliza el mismo mecanismo de registro de intento que un fallo normal (UC-002), solo expone la explicación ya generada para el ejercicio.

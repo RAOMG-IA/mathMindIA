@@ -3,6 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useStartSession, useTemas, useUserStatistics } from '../api'
 import { AcademicLevelStars, BackgroundGrid, Combobox, NeuralLoader } from '../components'
+import { useTrainingSessionStore } from '../store/useTrainingSessionStore'
 import { styles } from './HomeScreen.styles'
 import type { AcademicLevel, ExerciseType } from './HomeScreen.validation'
 import { temasForLevel, validateHomeForm } from './HomeScreen.validation'
@@ -22,6 +23,8 @@ export function HomeScreen() {
   const statistics = useUserStatistics()
   const temasQuery = useTemas()
   const startSession = useStartSession()
+
+  const startTrainingSession = useTrainingSessionStore((state) => state.start)
 
   const [mode, setMode] = useState<ExerciseType | null>(null)
   const [academicLevel, setAcademicLevel] = useState<AcademicLevel | null>(null)
@@ -58,8 +61,14 @@ export function HomeScreen() {
       { mode, academicLevel, topic },
       {
         onSuccess: (data) => {
-          // (app)/session/[sessionId] todavia no existe (siguiente pantalla pendiente, ADR-015).
-          // @ts-expect-error -- ruta real pendiente de construir
+          // Sin GET real que exponga "el ejercicio actual de una Session" -- se guarda aqui, en
+          // Zustand (ADR-015: el cronometro del ejercicio en curso ya vivia alli), para que
+          // SessionScreen lo consuma sin depender de la respuesta de esta mutation.
+          startTrainingSession({ sessionId: data.session.id, mode: data.session.mode, exercise: data.exercise })
+          // La ruta ya existe de verdad (app/(app)/session/[sessionId].tsx) pero los tipos
+          // generados de Expo Router siguen desactualizados en este entorno (expo start bloqueado
+          // por el EACCES de Windows documentado en memoria -- expo export no los regenera).
+          // @ts-expect-error -- tipos de rutas desactualizados, no la ruta en si
           router.push(`/(app)/session/${data.session.id}`)
         },
       },
