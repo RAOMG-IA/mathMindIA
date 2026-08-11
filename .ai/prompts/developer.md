@@ -3,6 +3,125 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+## 2026-08-11 — Fix: sesión de cliente no se invalidaba ante un 401
+
+**Input**: el usuario pidió arrancar el servicio para validar funcionalidad. Al reiniciar `backend-api` se descubrió `JWT_SECRET` completamente ausente de `.env` (el servidor no arrancaba) — corregido generando un secreto de desarrollo. Tras arrancar, el usuario reportó que Home mostraba el nivel académico correcto pero ningún Tema cargado.
+
+**Diagnóstico**: reproducido en vivo por `curl` con un token fresco — `/temas` funciona perfectamente (23 temas, 6 aplican a Primaria). El backend y los datos estaban bien; el fallo era enteramente del cliente. Causa: `fetchClient.ts` nunca reaccionaba a un 401 (hueco ya señalado en una revisión de seguridad anterior de esta misma sesión) — al rotar `JWT_SECRET`, cualquier `sessionToken` persistido en el navegador quedó inválido, pero la app lo seguía tratando como sesión activa. `useUserStatistics` mostraba datos cacheados de antes del reinicio (por eso el nivel sí se veía); `useTemas` (`staleTime: Infinity`, sin caché previa en esa pestaña) lanzó una petición fresca que chocó con el token muerto y falló en silencio — React Query la deja en estado error, la UI solo ve una lista vacía.
+
+**Decisión tomada**: nueva acción `expireSession()` en `useSessionStore` — limpia solo el estado en memoria (`sessionToken`/`userId`/`email` a `null`), sin `TokenStorage`. Se probó primero llamar a `logout(createTokenStorage())` directamente desde `fetchClient.ts`, pero `createTokenStorage.ts` importa `react-native` (`Platform`) para elegir implementación por plataforma, y eso rompe la resolución de módulos de Vitest en cuanto se evalúa (confirmado empíricamente: incluso con `import()` dinámico, el test que sí dispara la rama 401 falló al parsear el módulo) — mismo criterio ya documentado en ese archivo ("sin test automático"). `expireSession()` evita el acoplamiento manteniendo `fetchClient.ts` puro. Se dispara solo en un 401 de una ruta protegida (no en `/auth/login`, donde un 401 son credenciales inválidas, no sesión caducada). El guard de `(app)/_layout.tsx` ya reaccionaba a `sessionToken === null` redirigiendo a login — no hizo falta tocarlo.
+
+**Output generado**: `src/api/fetchClient.ts` (rama 401), `src/store/useSessionStore.ts` (`expireSession`), `src/api/fetchClient.test.ts` (2 tests nuevos: 401 protegido limpia sesión, 401 en login no la toca). `npx tsc --noEmit` limpio, `vitest run` → 17/17 archivos, 61/61 tests en `mobile-app` (antes 59). Verificado reconstruyendo y re-sirviendo el bundle web real.
+
+---
+
+## 2026-08-11 — Ingesta RAG de `ayudas-agilidad-calculo.txt` (pistas de Modo Test descartadas)
+
+**Input**: el usuario notó la tabla `hints` vacía tras poblar el Exercise Pool y pidió cargar `rag/input/ayudas-agilidad-calculo.txt` (trucos de agilidad de cálculo mental) y luego generar pistas, incluyendo para Modo Test, ligadas al problema.
+
+**Diagnóstico**: `hints` vacía es el comportamiento esperado — `GenerateHintUseCase` genera pistas bajo demanda (UC-003), nunca en batch; UC-001 (`generate:exercises`) nunca las toca. `RAG_INPUT_DIR`/`RAG_HISTORY_DIR` estaban vacíos en `.env` (nunca configurados), así que ni la ingesta podía correr — corregidos a `../../rag/input`/`../../rag/history`.
+
+**Decisión tomada**: ejecutado `npm run ingest:rag` (1 procesado, 0 errores) — mejora el contexto RAG que `QwenHintGenerator` ya usa para pistas reales de Modo Resolución. Pre-generar `hints` para Modo Test se descartó: contradice directamente US-005 ("Modo Test no ofrece pistas", `GenerateHintUseCase.ts:69-71` lanza si `exercise.type !== 'Resolution'`) y US-004 (la nota de cálculo mental es "contenido genérico y constante, no ligado al ejercicio", explícitamente no una pista) — ambas fijadas por el propio usuario esta misma sesión. `AskUserQuestion` → confirmó mantener el AC.
+
+**Output generado**: ninguno versionado — `.env` y `rag/` están en `.gitignore`, solo se documenta aquí para trazabilidad.
+
+---
+
+## 2026-08-11 — Revisión de `count` en `generate:exercises`: bug de sintaxis, tipado, coacción number→string
+
+**Input**: el usuario añadió manualmente un parámetro `count` a `GenerateExerciseBatchUseCase`/`QwenClient`/el prompt (pedir varios ejercicios por llamada al LLM, menos consumo de cuota) y pidió pasar los tests de `ai-engine` y revisar.
+
+**Hallazgos y decisiones**:
+- `QwenClient.test.ts` tenía un `it(...)` anidado a medio editar dentro de otro `it(...)` — error de sintaxis, la suite ni parseaba. Separado en dos tests hermanos.
+- El constructor de `GenerateExerciseBatchUseCase` había quedado `Partial<Pick<QwenClient, 'generateExercise' | 'generateExercises'>>` con varios `as any` para esquivar errores de TS en vez de resolverlos. Corregido a `Pick<QwenClient,'generateExercise'> & Partial<Pick<QwenClient,'generateExercises'>>` (el fake de test solo implementa `generateExercise`; el cliente real tiene ambos) y eliminados los `as any` — ya no hacían falta. Import muerto (`generateExerciseOutputSchema`) eliminado de `QwenClient.ts`. Mismo criterio aplicado al `as any` residual en `generateExerciseBatch.ts` (backend-api).
+- Al ejecutar el lote completo con `count=3` (proveedor activo: Groq/`gpt-oss-120b`), el modelo devuelve `correctAnswer`/`options` como JSON number en vez de string, sobre todo en Modo Resolución — el schema Zod rechazaba la respuesta entera, perdiendo los 3 ejercicios de la llamada. `AskUserQuestion` → el usuario eligió corregir el schema ahora y relanzar solo los combos fallidos. Añadido `stringifiableValue` (`z.union([z.string(), z.number()]).transform(String).pipe(z.string().min(1))`) en `generateExerciseOutputSchema` (`GenerateExercise.ts`) — coacciona en el borde (ADR-012) en vez de confiar en que el LLM respete el formato pedido.
+
+**Resultado del lote**: catálogo completo (23 Temas × niveles × Test/Resolution, `count=3`) → 168 generados / 16 fallidos (el bug de arriba, antes del fix). Reintento acotado solo a esos 16 combos, ya con el fix → 48 generados / 0 fallidos. Total: 216 ejercicios nuevos en el Pool.
+
+**Output generado**: `src/llm/QwenClient.ts`/`.test.ts`, `src/batch/GenerateExerciseBatchUseCase.ts`/`.test.ts`, `src/prompts/GenerateExercise.ts` (schema), `apps/backend-api/src/scripts/generateExerciseBatch.ts` (cleanup). `ai-engine`: 17/17 tests (antes 15), `tsc --noEmit`/`eslint` limpio. `backend-api`: `tsc --noEmit` limpio.
+
+---
+
+## 2026-08-11 — `Teclado` cableado en `SessionScreen` (solo iOS/Android)
+
+**Input**: el usuario pidió, para las versiones móviles, añadir el `Teclado` (construido en la tarea anterior, sin cablear) debajo del enunciado en Modo Resolución, deshabilitar el teclado nativo del terminal, y sincronizar las pulsaciones con el input.
+
+**Decisión tomada**: `SHOW_TECLADO = Platform.OS !== 'web'` — el `Teclado` solo se renderiza en iOS/Android; en Web el usuario ya tiene teclado físico, un teclado en pantalla no aporta nada. `TextInput` gana `showSoftInputOnFocus={!SHOW_TECLADO}` (prop real de RN, iOS/Android) — desactiva el teclado nativo del sistema solo donde se muestra el `Teclado` propio, dejándolo como única vía de edición (incluido borrar). `handleKeyPress(key)` sincroniza cada pulsación con el input controlado: `TECLADO_BACKSPACE` borra el último carácter (`value.slice(0, -1)`), cualquier otro valor se añade al final -- sin seguimiento de posición de cursor (judgment call, suficiente para un teclado de solo-añadir/borrar, no se pidió edición en medio del texto). Estado del modo básica/científica vive local a `ResolutionModeForm` (puramente de UI, no necesita subir a `SessionScreen` ni al store).
+
+**Output generado**: `src/screens/SessionScreen.tsx`/`.styles.ts` actualizados. Sin tests nuevos — wiring de UI sobre componentes ya presentacionales. `npx turbo run typecheck lint test` → en verde, 59/59 tests en `mobile-app` (sin cambios de cantidad). Verificado con bundle real (`expo export --platform web`) — confirma que en el bundle Web el `Teclado` no se renderiza (rama `Platform.OS !== 'web'` resuelta en build time).
+
+---
+
+## 2026-08-11 — Componentes `Tecla`/`Teclado` (teclado matemático reutilizable, sin cablear todavía)
+
+**Input**: el usuario pidió dos componentes nuevos, `Tecla` y `Teclado`, con dos modos (calculadora básica: dígitos, `+-*/.()`; calculadora científica) y un atributo en `Teclado` para conmutar entre ambos.
+
+**Decisión tomada**: `Tecla` (`src/components/Tecla/`) — presentacional puro (`label`/`value`/`onPress`/`variant`/`disabled`/`flex`), `value` opcional distinto de `label` para teclas cuyo glifo mostrado no es lo que se inserta (p. ej. "⌫" inserta el sentinel `TECLADO_BACKSPACE`, "sin" inserta `"sin("`). `Teclado` (`src/components/Teclado/`) — componente controlado (`mode`/`onModeChange`, mismo patrón que `Combobox`'s `multiSelect`), con conmutador propio dentro del componente (dos botones "Básica"/"Científica") además de ser controlable desde fuera. Modo científica es un **superset** del básico (mismas teclas + funciones), no un layout distinto — igual que una calculadora científica real. Conjunto de funciones científicas (`sin`/`cos`/`tan`/`log`/`√`/`xʸ`/`π`/`%`) es judgment call documentado, acotado a lo relevante para el catálogo de Temas (ADR-006: potencias-raíces, trigonometría, cálculo), no exhaustivo. Tecla de borrar (`⌫`) añadida como necesidad práctica mínima no pedida explícitamente — sin ella el teclado no permite corregir un error de tecleo.
+
+**Sin cablear a ninguna pantalla todavía** — el usuario pidió los componentes, no su integración; `SessionScreen`'s `ResolutionModeForm` sigue usando `TextInput` nativo. Candidato obvio para sustituirlo en una tarea futura, no asumido aquí.
+
+**Output generado**: `src/components/Tecla/{Tecla.tsx,Tecla.styles.ts,index.ts}`, `src/components/Teclado/{Teclado.tsx,Teclado.styles.ts,index.ts}` (nuevos), `src/components/index.ts` actualizado. Sin tests — presentacional puro sin lógica de rama no trivial que extraer (mismo criterio que `Checkbox`/`RadioButton`). `npx turbo run typecheck lint test` → en verde, 59/59 tests en `mobile-app` (sin cambios de cantidad).
+
+---
+
+## 2026-08-11 — Backoff ante 429 en `generate:exercises` + fix de prompt (Modo Test)
+
+**Input**: el usuario pidió una batería de ejercicios (3 por tipo/modo) para el catálogo completo. Al ejecutar el lote (216 llamadas), el 96% falló con `429` — Gemini (plan gratuito) tiene un límite de peticiones/minuto muy bajo y el script no tenía pausa ni reintento (`GenerateExerciseBatchUseCase`/`QwenClient` tampoco reintentan errores de transporte, solo violaciones de invariante). Consultado el usuario (`AskUserQuestion`), eligió añadir backoff y relanzar el catálogo completo.
+
+**Decisión tomada**: `generateExerciseBatch.ts` — pausa fija entre llamadas (`EXERCISE_BATCH_DELAY_MS`, default 3000ms) + reintento con backoff exponencial *solo* ante errores con `status === 429` (`EXERCISE_BATCH_RATE_LIMIT_RETRIES`/`_DELAY_MS`, defaults 5 intentos / 10000ms base, doblando cada vez). Otros errores (p. ej. invariante de `Exercise` violada tras los reintentos internos del propio UseCase) no se reintentan aquí, se cuentan como fallo y se continúa — el backoff es específicamente para rate limiting de transporte, no para calidad del contenido generado.
+
+**Segunda petición, en paralelo con el lote ya en marcha**: el usuario pidió corregir el prompt de Modo Test — los enunciados generados empezaban con frases redundantes ("Calcula mentalmente...", "Resuelve mentalmente..."), pese a que toda la app ya es de cálculo mental (contexto implícito). `buildGenerateExercisePrompt` (`apps/ai-engine/src/prompts/GenerateExercise.ts`) ahora instruye explícitamente, solo para `type === 'Test'`: el `statement` debe ser únicamente la operación/problema, sin esas frases introductorias. Sin test roto (ningún test existente asertaba el contenido literal del prompt). **El lote ya en ejecución sigue usando el prompt antiguo** (el proceso Node no recarga módulos en caliente) — consultado el usuario, eligió dejarlo terminar así en vez de perder el progreso ya hecho y volver a quemar cuota desde cero; los enunciados con la frase redundante son funcionalmente válidos, solo el estilo no es el pedido.
+
+**Output generado**: `apps/backend-api/src/scripts/generateExerciseBatch.ts` (backoff), `apps/backend-api/.env.example` (`EXERCISE_BATCH_DELAY_MS`/`_RATE_LIMIT_RETRIES`/`_RATE_LIMIT_DELAY_MS`), `apps/ai-engine/src/prompts/GenerateExercise.ts` (instrucción de Modo Test). `npx tsc --noEmit`/`eslint`/`vitest` → limpio en `backend-api`/`ai-engine` (15/15 tests en `ai-engine`, sin cambios de cantidad).
+
+---
+
+## 2026-08-11 — Refinamiento de UX de `SessionScreen`: `RadioButton`, botón fusionado, icono de pista
+
+**Input**: el usuario pidió 4 ajustes de diseño sobre la pantalla de sesión ya construida: (Resolución) "Pedir pista" como icono `?` junto al enunciado; "Enviar respuesta"/"Resolver" fusionados en un único botón cuya acción/label cambia según haya texto escrito; "Siguiente ejercicio" al mismo nivel que "Finalizar"; confirmar que pistas/solución se limpian al pasar de ejercicio. (Test) componente `RadioButton` reutilizable para las 3 opciones.
+
+**Decisión tomada**: `RadioButton` (`src/components/RadioButton/`) — presentacional puro (`selected`/`onPress`/`label`), círculo+punto sin icon library, mismo patrón que `Checkbox`. `TestModeOptions` lo usa para las 3 opciones, con `selectedOption` como estado local nuevo en `SessionScreen` (antes no se rastreaba qué opción se había pulsado, el envío era instantáneo sin marcar visualmente la elección). `ResolutionModeForm` pierde `onRequestHint`/`hintsEnabled` (el botón de pista sale de su interior) y fusiona sus dos botones en uno: `value.trim().length > 0 ? 'Enviar respuesta' : 'Resolver'`, mismo `onPress` condicional. El icono `?` de pista se renderiza directamente en `SessionScreen` dentro de una fila junto a `exercise.statement` (`statementRow`), solo en Modo Resolución. "Siguiente ejercicio" se mueve de un botón a ancho completo al final de la card a un botón pequeño en `topRow`, junto a "Finalizar" (mismo contenedor `topRowActions`).
+
+**Limpieza de pistas/solución entre ejercicios**: ya funcionaba correctamente antes de este cambio (`useEffect` sobre `exercise?.id` ya reseteaba `result`/`submittedValue`, y `setExercise` en el store ya reseteaba `hints: []`) — se añadió `setSelectedOption(null)` al mismo efecto para que el nuevo estado de selección de Test también arranque limpio, sin cambiar el mecanismo ya existente.
+
+**Output generado**: `src/components/RadioButton/{RadioButton.tsx,RadioButton.styles.ts,index.ts}` (nuevo), `src/components/index.ts` actualizado, `src/screens/SessionScreen.tsx`/`.styles.ts` reescritos. Sin tests nuevos — cambio de UI puro sobre lógica ya testeada (`computeTimerState`/`pickMentalMathTip`/`useTrainingSessionStore` sin tocar). `npx turbo run typecheck lint test` → en verde, 59/59 tests en `mobile-app` (sin cambios de cantidad). Verificado con bundle real (`expo export --platform web`, sin errores).
+
+---
+
+## 2026-08-11 — Script `generate:exercises` (UC-001, wiring real) + fix de config Gemini
+
+**Input**: el usuario cambió `AI_API_KEY`/`AI_BASE_URL`/`AI_MODEL_NAME` de DeepSeek a Gemini para evitar el 402 de saldo (hallazgo Security 2026-08-10), pero seguía viendo "No se pudo iniciar la sesión. Inténtalo de nuevo o elige otro tema." al probar `HomeScreen`.
+
+**Diagnóstico (antes de tocar nada)**: reproducido con `curl` directo contra `POST /sessions` (esa ruta expone el mensaje real, `exposeMessage=true`) — con el Tema `arit.suma-resta` funciona (200), con cualquier otro Tema falla con `"No exercises available for topic <X> at <nivel> near rating <r>"`. Causa real: en toda la BBDD solo existía **un** `Exercise` (el seed manual de `main.ts`) — `StartSessionUseCase`/`SelectNextExerciseUseCase` son deterministas (UC-008), nunca llaman al LLM, así que cambiar de proveedor de IA no podía arreglar este error. `GenerateExerciseBatchUseCase` (UC-001) existía en `ai-engine`, testeado, pero **nunca se exportaba desde el barrel del paquete ni tenía ningún script que lo invocara** (a diferencia de `IngestKnowledgeBaseUseCase`/`ingest:rag`) — el Pool nunca podía crecer. Consultado el usuario (`AskUserQuestion`): construir el script ahora.
+
+**Decisión tomada**: `apps/ai-engine/src/index.ts` exporta ahora `GenerateExerciseBatchUseCase`. Nuevo `apps/backend-api/src/scripts/generateExerciseBatch.ts` (`npm run generate:exercises`), mismo patrón que `ingestKnowledgeBase.ts`: compone adaptadores reales (`PrismaExerciseRepository`, `PostgresKnowledgeBaseIndex`+`XenovaEmbedder`, `LangChainChatModel`+`QwenClient`), sin test automático (wiring puro, depende de red/DB real, mismo criterio que el resto de scripts/composition roots). Alcance configurable por variables de entorno opcionales (`EXERCISE_BATCH_TEMA`/`_LEVEL`/`_TYPE`/`_COUNT`) — sin ellas, genera para el catálogo `TEMA_CATALOG` completo (23 Temas × niveles × Test/Resolution), deliberadamente no automático por defecto en la práctica (se documenta el coste en el propio script) para no quemar cuota del LLM sin querer en una prueba acotada.
+
+**Hallazgo real durante la verificación — config de Gemini mal formada, no relacionada con el script**: al ejecutar el script acotado a un combo (`arit.fracciones`/Primaria/Resolution), el error real (no enmascarado, es un script CLI, no una ruta HTTP) fue `404 ... MODEL_NOT_FOUND`. Revisado `.env`: `AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/interactions` — ruta inexistente en la API de Gemini. Corregido a `https://generativelanguage.googleapis.com/v1beta/openai` (el endpoint real compatible con OpenAI que documenta Google). Reejecutado: **generó un `Exercise` real** (`arit.fracciones`/Primaria/Resolution). Backend reiniciado con la config corregida; verificado end-to-end por `curl`: `POST /sessions` con `arit.fracciones` → 200 con el ejercicio recién generado; `POST /hints` sobre esa sesión → pista real generada por Gemini (antes bloqueada por el 402 de DeepSeek, ahora funcional).
+
+**Output generado**: `apps/ai-engine/src/index.ts` (export nuevo), `apps/backend-api/src/scripts/generateExerciseBatch.ts` (nuevo), `apps/backend-api/package.json` (`generate:exercises`), `apps/backend-api/.env.example` (`EXERCISE_BATCH_*` documentadas), `apps/backend-api/.env` (`AI_BASE_URL` de Gemini corregida). `npx tsc --noEmit`/`eslint` → limpio en `backend-api`/`ai-engine`. `vitest run --exclude NodeIngestionFileSystem.test.ts` → 91/91 en verde en `backend-api` (sin tests nuevos, mismo criterio que `ingestKnowledgeBase.ts`). Verificado en vivo: 1 `Exercise` generado por Gemini, flujo `/sessions`→`/hints` completo con el Tema nuevo.
+
+---
+
+## 2026-08-11 — `app/(app)/session/[sessionId].tsx` (US-004/US-005/US-006-acción, TDD Red→Green)
+
+**Input**: el usuario pidió definir y luego construir la pantalla de sesión. Definición cerrada en dos rondas de `AskUserQuestion` (ver conversación): (1) sin endpoint nuevo para "ejercicio actual" — se pasa de Home a la pantalla vía estado de cliente; (2) en Modo Resolución, expirar el tiempo solo desbloquea pistas, no auto-envía; (3) botón "Finalizar" siempre visible; (4) resumen de `POST /sessions/end` sembrado en TanStack Query. Ronda 2 añadió: nota de cálculo mental en Modo Test (contenido genérico, no IA), y botón "Resolver" en Resolución que revela la solución **enviando el intento como incorrecto** (`submittedValue` vacío) — mismo mecanismo que un fallo normal, sin endpoint nuevo. Ambas extensiones documentadas primero como AC nuevas en US-004/US-005 (Product) antes de escribir código.
+
+**Decisión de arquitectura — `useTrainingSessionStore` (Zustand)**: el "ejercicio actual" de una `Session` no tiene ningún GET real (`Session`, dominio, no lo trackea) — solo llega vía la respuesta de `POST /sessions` o `POST /answers`. ADR-015 ya fijaba "el cronómetro del ejercicio en curso" en Zustand; se extiende ese mismo store de estado-de-cliente para incluir `sessionId`/`mode`/`currentExercise`/`exerciseShownAt`/`hints` en vez de crear una entrada de caché de TanStack Query sin `queryFn` real. Si el usuario entra directo a la URL o recarga sin haber pasado por Home (`sessionId` de la ruta no coincide con el del store), `SessionScreen` redirige a Home — hueco de arquitectura aceptado y documentado, no resuelto con backend nuevo en esta tarea.
+
+**Lógica pura (TDD)**: `SessionScreen.timer.ts` (`computeTimerState`, 4/4 tests — remainingMs/expired a partir de `exerciseShownAt`+`timeLimitMs`+`now`, `now` como parámetro para poder testear sin temporizadores reales); `SessionScreen.mentalMathTips.ts` (`pickMentalMathTip`, 4/4 tests — selección determinista por `Exercise.id`, mismo ejercicio siempre misma nota); `useTrainingSessionStore.ts` (5/5 tests, mismo patrón que `useSessionStore.test.ts`).
+
+**`SessionScreen.tsx`**: refactorizado en 3 subcomponentes locales (`TestModeOptions`, `ResolutionModeForm`, `ResultBanner`) para bajar la complejidad ciclomática de la función principal (27→16, aviso de SonarLint del IDE, no bloqueante en `eslint .`) — resto de complejidad aceptado como inherente a las ramas de UI (Test/Resolución/resultado/errores/pool agotado), sin fragmentar más. Modo Test: 3 opciones + nota de cálculo mental siempre visible; timeout → auto-envío vacío (con guarda `autoSubmittedRef` para no disparar el envío más de una vez mientras el intervalo de 250ms sigue corriendo). Modo Resolución: input libre + "Enviar respuesta" + "Resolver" (ambos mismo mecanismo, `handleSubmit`) + "Pedir pista" (habilitado solo tras expirar). "Finalizar" siempre visible → siembra `queryKeys.sessionSummary(sessionId)` y limpia el store antes de navegar.
+
+**`HomeScreen.tsx`**: `onSuccess` de `useStartSession` ahora llama a `useTrainingSessionStore().start(...)` antes de navegar.
+
+**Hueco de entorno, no de código — `expo-router` tipos desactualizados**: `router.push('/(app)/session/...')`/`router.replace('/(app)/home')` necesitan `@ts-expect-error` pese a que ambas rutas ya existen de verdad — `expo start` sigue bloqueado por el `EACCES` de Windows (Modo de desarrollador desactivado, ya documentado), así que `.expo/types/router.d.ts` nunca se regeneró desde antes de construir `(app)/home.tsx`. Se autolimpiarán en cuanto `expo start` funcione en un entorno sin ese bloqueo.
+
+**Hallazgo real, ajeno al código — cuenta de DeepSeek sin saldo**: verificado el flujo completo con `curl` contra el backend real (`POST /sessions` → `POST /answers` → `POST /sessions/end`, DTOs exactos a los que consume `SessionScreen`, correctos). `POST /hints` devolvía `"Forbidden or invalid session"` pese a una sesión válida y activa — diagnosticado con un script aislado (fuera de `routes.ts`, que enmascara cualquier error de esa ruta con el mensaje genérico por diseño, hallazgo de Security 2026-08-07) que invoca `GenerateHintUseCase` directamente: el error real es `APIError: 402 Insufficient Balance` de la API de DeepSeek (`AI_API_KEY` configurada en `.env`, sin saldo). No es un bug de `GenerateHintUseCase`/`HintController` (8/8 y 2/2 tests ya en verde, sin tocar), ni de `SessionScreen` (la petición que envía es correcta) — es un problema de cuenta/facturación externo, fuera del alcance de esta tarea. Señalado directamente al usuario, no solo en esta traceability.
+
+**Output generado**: `docs/user-stories/{US-004-resolver-ejercicio,US-005-solicitar-pista}.md` (AC nuevas), `apps/mobile-app/src/screens/{SessionScreen.tsx,SessionScreen.styles.ts,SessionScreen.timer.ts,SessionScreen.timer.test.ts,SessionScreen.mentalMathTips.ts,SessionScreen.mentalMathTips.test.ts}`, `apps/mobile-app/src/store/{useTrainingSessionStore.ts,useTrainingSessionStore.test.ts}`, `apps/mobile-app/app/(app)/session/[sessionId].tsx` (nuevo), `apps/mobile-app/src/api/queryKeys.ts` (`sessionSummary`), `apps/mobile-app/src/screens/HomeScreen.tsx` (wiring). 13/13 tests nuevos. `npx turbo run typecheck lint test` → en verde (59/59 tests en `mobile-app`, antes 46). Verificado con bundle real (`expo export --platform web`, sin errores) y flujo E2E real de `/answers`+`/sessions/end` por `curl`; `/hints` verificado por contrato (tests) pero no end-to-end en vivo, bloqueado por el saldo de DeepSeek.
+
+---
+
 ---
 task_id: STATUS-050
 date: 2026-08-10

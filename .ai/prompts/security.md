@@ -3,6 +3,56 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+## 2026-08-11 — Fix: sesión de cliente no se invalidaba ante un 401
+
+**Contexto utilizado**: `apps/mobile-app/src/api/fetchClient.ts`, `useSessionStore.ts`, `(app)/_layout.tsx`, hueco ya señalado en la revisión de `session/[sessionId].tsx` (2026-08-11, punto 6) y en memoria del proyecto.
+
+**Hallazgos**:
+1. **Hueco confirmado con un caso real, ahora corregido**: un `sessionToken` inválido/expirado (aquí, por rotación de `JWT_SECRET`) seguía tratándose como sesión activa en el cliente — cualquier request autenticada fallaba en silencio (401 → error de React Query, sin acción). No es una vulnerabilidad de autorización (el backend seguía rechazando correctamente el token, `JwtTokenIssuer`/middleware sin tocar) sino un fallo de UX/resiliencia que además puede ocultar un problema real de sesión al usuario.
+2. **Alcance del fix, deliberadamente acotado**: `expireSession()` solo limpia el estado en memoria (Zustand), no `TokenStorage` — la entrada persistida (`localStorage`/`SecureStore`) queda obsoleta hasta el siguiente `login()` real (que la sobreescribe). Riesgo residual aceptado: si el usuario cierra la pestaña/app sin volver a loguearse, la próxima carga rehidrata el token muerto y repite el ciclo una vez más (autolimitado — el guard corrige en cuanto la primera request real falla), no un bucle infinito ni un fallo de seguridad.
+3. **Ruta pública excluida a propósito**: un 401 en `/auth/login` son credenciales inválidas, no sesión caducada — `expireSession()` no se dispara ahí (test dedicado que lo confirma).
+4. **Sin secretos ni dependencias nuevas.**
+
+**Decisión tomada**: sin hallazgos bloqueantes — cambio que reduce superficie de confusión/soporte, no introduce riesgo nuevo.
+
+**Output generado**: esta entrada.
+
+---
+
+## 2026-08-11 — Revisión: script `generate:exercises`
+
+**Contexto utilizado**: `apps/backend-api/src/scripts/generateExerciseBatch.ts`, `.env`/`.env.example`, ADR-012.
+
+**Hallazgos**:
+1. **Sin superficie HTTP nueva**: es un script CLI manual (`npm run generate:exercises`), no una ruta expuesta — mismo perfil de riesgo que `ingest:rag`, sin autenticación aplicable (se ejecuta con acceso ya de operador/desarrollador al servidor).
+2. **Secretos**: `AI_API_KEY` se lee solo de `process.env` (vía `dotenv/config`), nunca se loguea ni se persiste — mismo criterio que el resto de scripts de composición. La corrección de `AI_BASE_URL` (endpoint mal formado de Gemini) no tocó ningún valor de secreto, solo la URL pública del endpoint.
+3. **Sin dependencias nuevas**: reutiliza `LangChainChatModel`/`QwenClient`/`PostgresKnowledgeBaseIndex` ya auditados.
+4. **Contenido generado por IA**: `GenerateExerciseBatchUseCase` ya valida el output contra las invariantes de `Exercise` (ADR-004) antes de persistir (`violatesExerciseInvariant`) — sin cambio aquí, el script solo invoca el Caso de Uso existente.
+
+**Decisión tomada**: sin cambios de código. Ningún hallazgo crítico ni bloqueante.
+
+**Output generado**: esta entrada.
+
+---
+
+## 2026-08-11 — Revisión: `app/(app)/session/[sessionId].tsx`
+
+**Contexto utilizado**: `apps/mobile-app/src/screens/SessionScreen.tsx`, `useTrainingSessionStore.ts`, `apps/backend-api/src/presentation/http/routes.ts` (mapeo de errores de `/answers`/`/hints`/`/sessions/end`), ADR-012.
+
+**Hallazgos**:
+1. **Sin hallazgos de OWASP Top 10**: `submittedValue` viaja como string en el body JSON de `POST /answers`, comparado server-side sin interpretarse ni ejecutarse — sin superficie de inyección nueva. El botón "Resolver" no añade una ruta nueva ni un campo nuevo: reutiliza `POST /answers` con `submittedValue: ''`, mismo mecanismo ya cubierto por los tests de `ValidateAnswerUseCase`.
+2. **Sin fuga de la respuesta correcta antes de responder**: `useTrainingSessionStore.currentExercise` es siempre un `ExercisePublicDto` (nunca incluye `correctAnswer`/`explanation`/`difficulty`, por diseño del propio DTO) — el store de cliente no puede filtrar la solución aunque se inspeccione en DevTools.
+3. **Mensajes de error genéricos respetados**: `SessionScreen` muestra un banner genérico ante cualquier error de `submitAnswer`/`requestHint`/`endSession`, sin intentar distinguir causas — consistente con `errorMapping.ts` (`exposeMessage=false` en esas tres rutas, hallazgo Security 2026-08-07, IDOR).
+4. **Efecto colateral del enmascarado genérico, no nuevo pero confirmado aquí por primera vez con un caso real**: el mismo mecanismo que evita filtrar causas de IDOR también oculta errores operativos legítimos — verificado en esta tarea que un fallo real de facturación de DeepSeek (`402 Insufficient Balance`) llega al cliente como `"Forbidden or invalid session"`, indistinguible de un intento de acceso a una sesión ajena. No es una vulnerabilidad (no hay downgrade de seguridad, el mensaje sigue sin revelar nada explotable) pero sí un coste real de observabilidad/soporte — ya aceptado como trade-off en el hallazgo original de 2026-08-07, reconfirmado aquí con un caso concreto en vez de teórico.
+5. **Sin secretos ni dependencias nuevas**: ningún literal sensible añadido; sin instalaciones nuevas en esta tarea.
+6. **Sin regresión de hallazgos previos**: el hueco de sesión no invalidada ante 401 (`fetchClient.ts`, revisión 2026-08-10) sigue igual, no tocado.
+
+**Decisión tomada**: sin cambios de código. Ningún hallazgo crítico ni bloqueante — el hallazgo #4 es un recordatorio, no una acción nueva (ya estaba aceptado).
+
+**Output generado**: esta entrada.
+
+---
+
 ---
 task_id: STATUS-047
 date: 2026-08-10
