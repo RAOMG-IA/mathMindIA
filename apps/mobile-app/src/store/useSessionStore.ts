@@ -21,6 +21,7 @@ interface SessionState {
   hydrate(storage: TokenStorage): Promise<void>
   login(session: PersistedSession, storage: TokenStorage): Promise<void>
   logout(storage: TokenStorage): Promise<void>
+  expireSession(): void
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -48,5 +49,15 @@ export const useSessionStore = create<SessionState>((set) => ({
   async logout(storage) {
     await storage.deleteItem(SESSION_STORAGE_KEY)
     set({ userId: null, email: null, sessionToken: null, isHydrated: true })
+  },
+
+  // Reaccion a un sessionToken invalido/expirado detectado en un 401 real (fetchClient.ts) --
+  // solo limpia el estado en memoria, sin TokenStorage: fetchClient.ts es deliberadamente puro
+  // (sin dependencia de react-native, ver createTokenStorage.ts) y no puede invocar logout()
+  // completo. El guard de (app)/_layout.tsx reacciona igual (sessionToken null => redirige a
+  // login); la entrada persistida queda obsoleta hasta el proximo login() real, que la
+  // sobrescribe.
+  expireSession() {
+    set({ userId: null, email: null, sessionToken: null })
   },
 }))

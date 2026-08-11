@@ -12,10 +12,11 @@ interface ErrorBody {
 }
 
 export async function fetchClient<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const isProtectedPath = !PUBLIC_PATHS.has(path)
   const headers = new Headers(init.headers)
   headers.set('Content-Type', 'application/json')
 
-  if (!PUBLIC_PATHS.has(path)) {
+  if (isProtectedPath) {
     const sessionToken = useSessionStore.getState().sessionToken
     if (sessionToken) {
       headers.set('Authorization', `Bearer ${sessionToken}`)
@@ -25,6 +26,15 @@ export async function fetchClient<T>(path: string, init: RequestInit = {}): Prom
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers })
 
   if (!response.ok) {
+    // Hueco detectado al validar Home tras rotar JWT_SECRET (STATUS.md): un sessionToken
+    // invalido/expirado seguia "logueado" en el cliente -- las queries fallaban en silencio
+    // (React Query las deja en estado error, la UI solo veia listas vacias sin explicacion).
+    // expireSession() (no logout()): fetchClient.ts es deliberadamente puro, sin depender de
+    // react-native (createTokenStorage.ts la necesita para elegir storage por plataforma).
+    if (isProtectedPath && response.status === 401) {
+      useSessionStore.getState().expireSession()
+    }
+
     const body = (await response.json().catch(() => ({}))) as ErrorBody
     throw new Error(body.error ?? `Request failed with status ${response.status}`)
   }

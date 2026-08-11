@@ -60,4 +60,26 @@ describe('fetchClient', () => {
       'Forbidden or invalid session',
     )
   })
+
+  it('en un 401 de una ruta protegida, cierra la sesion (sessionToken invalido/expirado)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401 })),
+    )
+
+    await expect(fetchClient('/sessions/end', { method: 'POST' })).rejects.toThrow('Invalid session')
+
+    expect(useSessionStore.getState().sessionToken).toBeNull()
+  })
+
+  it('en un 401 de una ruta publica (credenciales invalidas en login), no toca la sesion', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ error: 'Invalid credentials' }), { status: 401 })),
+    )
+
+    await expect(fetchClient('/auth/login', { method: 'POST' })).rejects.toThrow('Invalid credentials')
+
+    expect(useSessionStore.getState().sessionToken).toBe('tok-1')
+  })
 })
