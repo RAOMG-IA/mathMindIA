@@ -65,11 +65,11 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
 
     const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Resolution' })
 
-    expect(result.exercise.id).toBe('exercise-1')
-    expect(result.exercise.statement).toBe('15 + 27')
-    expect(result.exercise.options).toBeUndefined()
-    expect(result.exercise.generatedBy).toBe('ai-batch')
-    expect(result.exercise.difficulty.value).toBe(625) // punto medio de 500-750
+    expect(result.exercises[0]!.id).toBe('exercise-1')
+    expect(result.exercises[0]!.statement).toBe('15 + 27')
+    expect(result.exercises[0]!.options).toBeUndefined()
+    expect(result.exercises[0]!.generatedBy).toBe('ai-batch')
+    expect(result.exercises[0]!.difficulty.value).toBe(625) // punto medio de 500-750
     expect(qwen.calls).toHaveLength(1)
 
     const persisted = await exercises.findById('exercise-1' as never)
@@ -89,8 +89,8 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
 
     const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' })
 
-    expect(result.exercise.options).toEqual(['40', '42', '45'])
-    expect(result.exercise.correctAnswer).toBe('42')
+    expect(result.exercises[0]!.options).toEqual(['40', '42', '45'])
+    expect(result.exercises[0]!.correctAnswer).toBe('42')
   })
 
   it('flujo 4a, reintenta si el primer intento viola la invariante y el segundo es valido', async () => {
@@ -109,7 +109,7 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
     const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' })
 
     expect(qwen.calls).toHaveLength(2)
-    expect(result.exercise.options).toEqual(['40', '42', '45'])
+    expect(result.exercises[0]!.options).toEqual(['40', '42', '45'])
   })
 
   it('lanza tras agotar los intentos si ninguna generacion es valida', async () => {
@@ -125,9 +125,7 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
       new InMemoryKnowledgeBaseIndex(),
     )
 
-    await expect(
-      useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' }),
-    ).rejects.toThrow()
+    await expect(useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Test' })).rejects.toThrow()
     expect(qwen.calls.length).toBeGreaterThan(1)
 
     const all = await exercises.findByDifficultyBand({
@@ -147,9 +145,7 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
       new InMemoryKnowledgeBaseIndex(),
     )
 
-    await expect(
-      useCase.execute({ tema: aTema(), academicLevel: 'Secundaria', type: 'Resolution' }),
-    ).rejects.toThrow()
+    await expect(useCase.execute({ tema: aTema(), academicLevel: 'Secundaria', type: 'Resolution' })).rejects.toThrow()
     expect(qwen.calls).toHaveLength(0)
   })
 })

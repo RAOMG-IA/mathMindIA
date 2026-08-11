@@ -13,7 +13,8 @@
     "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "ingest:rag": "tsx src/scripts/ingestKnowledgeBase.ts"
+    "ingest:rag": "tsx src/scripts/ingestKnowledgeBase.ts",
+    "generate:exercises": "tsx src/scripts/generateExerciseBatch.ts"
   },
   "dependencies": {
     "@mathmind/ai-engine": "*",

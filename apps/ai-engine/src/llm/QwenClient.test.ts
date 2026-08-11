@@ -52,8 +52,9 @@ describe('QwenClient', () => {
 
   describe('generateExercise (UC-001)', () => {
     it('parsea una respuesta valida (tipo Resolution, sin options)', async () => {
+      // QwenClient ahora espera que el modelo devuelva un arreglo para soportar batch
       const client = new QwenClient(
-        new FakeChatModel(JSON.stringify({ statement: '15 + 27', correctAnswer: '42', explanation: '15 + 27 = 42' })),
+        new FakeChatModel(JSON.stringify([{ statement: '15 + 27', correctAnswer: '42', explanation: '15 + 27 = 42' }])),
       )
 
       const result = await client.generateExercise({
@@ -67,7 +68,7 @@ describe('QwenClient', () => {
     })
 
     it('lanza si la respuesta no tiene la forma esperada', async () => {
-      const client = new QwenClient(new FakeChatModel(JSON.stringify({ statement: '15 + 27' })))
+      const client = new QwenClient(new FakeChatModel(JSON.stringify([{ statement: '15 + 27' }])))
 
       await expect(
         client.generateExercise({
@@ -77,6 +78,44 @@ describe('QwenClient', () => {
           targetDifficulty: 600,
         }),
       ).rejects.toThrow()
+    })
+
+    it('parsea un arreglo de ejercicios (generateExercises)', async () => {
+      const client = new QwenClient(
+        new FakeChatModel(JSON.stringify([
+          { statement: '15 + 27', correctAnswer: '42', explanation: '15 + 27 = 42' },
+          { statement: '5 + 7', correctAnswer: '12', explanation: '5 + 7 = 12' },
+        ])),
+      )
+
+      const results = await client.generateExercises({
+        tema: { code: 'arit.suma-resta', description: 'Suma y resta' },
+        academicLevel: 'Primaria',
+        type: 'Resolution',
+        targetDifficulty: 600,
+        count: 2,
+      })
+
+      expect(results).toHaveLength(2)
+      expect(results[0]!.statement).toBe('15 + 27')
+    })
+
+    it('coacciona correctAnswer/options numericos (JSON number) a string', async () => {
+      const client = new QwenClient(
+        new FakeChatModel(
+          JSON.stringify([{ statement: '15 + 27', options: [40, 42, 45], correctAnswer: 42, explanation: '15 + 27 = 42' }]),
+        ),
+      )
+
+      const result = await client.generateExercise({
+        tema: { code: 'arit.suma-resta', description: 'Suma y resta' },
+        academicLevel: 'Primaria',
+        type: 'Test',
+        targetDifficulty: 600,
+      })
+
+      expect(result.correctAnswer).toBe('42')
+      expect(result.options).toEqual(['40', '42', '45'])
     })
   })
 })

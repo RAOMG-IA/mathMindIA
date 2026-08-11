@@ -21,10 +21,11 @@ export interface GenerateExerciseBatchInput {
   readonly tema: Tema
   readonly academicLevel: AcademicLevel
   readonly type: ExerciseType
+  readonly count?: number
 }
 
 export interface GenerateExerciseBatchOutput {
-  readonly exercise: Exercise
+  readonly exercises: Exercise[]
 }
 
 // UC-001 flujo 4a: "se descarta y se reintenta (maximo N intentos)". N no esta fijado en el
@@ -52,7 +53,7 @@ function violatesExerciseInvariant(type: ExerciseType, output: GenerateExerciseO
 
 export class GenerateExerciseBatchUseCase {
   constructor(
-    private readonly qwen: Pick<QwenClient, 'generateExercise'>,
+    private readonly qwen: Pick<QwenClient, 'generateExercise'> & Partial<Pick<QwenClient, 'generateExercises'>>,
     private readonly exercises: ExerciseRepository,
     private readonly ids: IdGenerator,
     private readonly knowledgeBase: KnowledgeBaseIndex,
@@ -71,41 +72,58 @@ export class GenerateExerciseBatchUseCase {
     const query = `${input.tema.code} ${input.tema.description}`
     const context = await this.knowledgeBase.search(query, TOP_K)
 
+    const requested = input.count ?? 1
+    let remaining = requested
+    const saved: Exercise[] = []
     let lastError: Error = new Error('GenerateExerciseBatchUseCase: no attempts were made')
-    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
-      const generated = await this.qwen.generateExercise({
+
+    for (let attempt = 0; attempt < MAX_ATTEMPTS && remaining > 0; attempt += 1) {
+      const batchInput = {
         tema: { code: input.tema.code, description: input.tema.description },
         academicLevel: input.academicLevel,
         type: input.type,
         targetDifficulty,
         context,
-      })
-
-      if (violatesExerciseInvariant(input.type, generated)) {
-        lastError = new Error(
-          `Generated exercise for ${input.tema.code} violates Exercise invariants (type=${input.type})`,
-        )
-        continue
+        count: remaining,
       }
 
-      const exercise: Exercise = {
-        id: this.ids.generate() as ExerciseId,
-        type: input.type,
-        academicLevel: input.academicLevel,
-        topic: input.tema.code,
-        statement: generated.statement,
-        options: generated.options,
-        correctAnswer: generated.correctAnswer,
-        difficulty: { value: targetDifficulty },
-        timer: { limitMs: DEFAULT_TIME_LIMIT_MS },
-        explanation: generated.explanation,
-        generatedBy: 'ai-batch',
+      const generatedList = this.qwen.generateExercises
+        ? await this.qwen.generateExercises(batchInput)
+        : [await this.qwen.generateExercise(batchInput)]
+
+      const valids: GenerateExerciseOutput[] = []
+      for (const g of generatedList) {
+        if (violatesExerciseInvariant(input.type, g)) {
+          lastError = new Error(
+            `Generated exercise for ${input.tema.code} violates Exercise invariants (type=${input.type})`,
+          )
+          continue
+        }
+        valids.push(g)
       }
 
-      await this.exercises.save(exercise)
-      return { exercise }
+      for (const generated of valids) {
+        const exercise: Exercise = {
+          id: this.ids.generate() as ExerciseId,
+          type: input.type,
+          academicLevel: input.academicLevel,
+          topic: input.tema.code,
+          statement: generated.statement,
+          options: generated.options,
+          correctAnswer: generated.correctAnswer,
+          difficulty: { value: targetDifficulty },
+          timer: { limitMs: DEFAULT_TIME_LIMIT_MS },
+          explanation: generated.explanation,
+          generatedBy: 'ai-batch',
+        }
+
+        await this.exercises.save(exercise)
+        saved.push(exercise)
+        remaining -= 1
+      }
     }
 
-    throw lastError
+    if (saved.length === 0) throw lastError
+    return { exercises: saved }
   }
 }

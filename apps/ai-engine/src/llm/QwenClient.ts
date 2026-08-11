@@ -1,8 +1,5 @@
 import type { ChatModel } from './ChatModel.js'
-import {
-  buildGenerateExercisePrompt,
-  generateExerciseOutputSchema,
-} from '../prompts/GenerateExercise.js'
+import { buildGenerateExercisePrompt, generateExerciseOutputsSchema } from '../prompts/GenerateExercise.js'
 import type { GenerateExerciseInput, GenerateExerciseOutput } from '../prompts/GenerateExercise.js'
 import { buildGenerateHintPrompt, generateHintOutputSchema } from '../prompts/GenerateHint.js'
 import type { GenerateHintInput, GenerateHintOutput } from '../prompts/GenerateHint.js'
@@ -18,8 +15,15 @@ export class QwenClient {
   constructor(private readonly model: ChatModel) {}
 
   async generateExercise(input: GenerateExerciseInput): Promise<GenerateExerciseOutput> {
+    const results = await this.generateExercises(input)
+    const [first] = results
+    if (!first) throw new Error('QwenClient.generateExercise: empty result array')
+    return first
+  }
+
+  async generateExercises(input: GenerateExerciseInput): Promise<GenerateExerciseOutput[]> {
     const raw = await this.model.invoke(buildGenerateExercisePrompt(input))
-    return generateExerciseOutputSchema.parse(JSON.parse(raw))
+    return generateExerciseOutputsSchema.parse(JSON.parse(raw))
   }
 
   async generateHint(input: GenerateHintInput): Promise<GenerateHintOutput> {

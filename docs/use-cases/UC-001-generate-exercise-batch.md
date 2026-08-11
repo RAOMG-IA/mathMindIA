@@ -1,4 +1,14 @@
 # UC-001: Generate Exercise (Batch)
+ 
+ ## Cambios recientes
+
+- Se añadió un parámetro opcional `count` al contrato de generación. Cuando `count` > 1 el sistema
+	solicitará al modelo un arreglo con `count` ejercicios en una sola llamada para reducir
+	el impacto de rate limits durante cargas iniciales.
+- El Caso de Uso ahora puede recibir `count` en su input y persiste todos los ejercicios válidos
+	devueltos por el modelo. Los ejercicios inválidos se reintentan en bloques hasta `MAX_ATTEMPTS`.
+- La validación y las invariantes de dominio (`type='Test'` => 3 opciones y `correctAnswer ∈ options`)
+	siguen aplicándose; solo se persisten ejercicios que cumplen las invariantes.
 
 `GenerateExerciseBatchUseCase`
 
