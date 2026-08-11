@@ -67,6 +67,7 @@ export class StartSessionUseCase {
       userId: input.userId,
       academicLevel: input.academicLevel,
       topic: input.topic,
+      type: input.mode,
     })
 
     return { session, exercise }

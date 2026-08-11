@@ -51,6 +51,17 @@ function violatesExerciseInvariant(type: ExerciseType, output: GenerateExerciseO
   return output.options !== undefined
 }
 
+// Hueco real detectado (STATUS.md): un batch con count>1 asignaba el mismo targetDifficulty
+// (punto medio del rango) a los N ejercicios -- SelectNextExerciseUseCase, ante un empate
+// exacto, siempre devolvia el primero, asi que "siguiente ejercicio" repetia indefinidamente el
+// mismo para cualquier Tema/nivel poblado solo por un batch. Reparte la dificultad de forma
+// determinista a lo largo del rango del Tema en vez de pedirselo al LLM (mismo criterio que
+// Timer/DEFAULT_TIME_LIMIT_MS: es una decision de dominio, no delegada a la IA).
+function computeSpreadDifficulty(range: { min: number; max: number }, index: number, total: number): number {
+  if (total <= 1) return (range.min + range.max) / 2
+  return range.min + ((range.max - range.min) * index) / (total - 1)
+}
+
 export class GenerateExerciseBatchUseCase {
   constructor(
     private readonly ia: Pick<IAClient, 'generateExercise'> & Partial<Pick<IAClient, 'generateExercises'>>,
@@ -111,7 +122,7 @@ export class GenerateExerciseBatchUseCase {
           statement: generated.statement,
           options: generated.options,
           correctAnswer: generated.correctAnswer,
-          difficulty: { value: targetDifficulty },
+          difficulty: { value: computeSpreadDifficulty(levelRange.difficultyRange, saved.length, requested) },
           timer: { limitMs: DEFAULT_TIME_LIMIT_MS },
           explanation: generated.explanation,
           generatedBy: 'ai-batch',

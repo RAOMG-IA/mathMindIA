@@ -19,6 +19,11 @@ export interface SelectNextExerciseInput {
   readonly userId: UserId
   readonly academicLevel: AcademicLevel
   readonly topic: TemaCode
+  readonly type: ExerciseType
+  // Ejercicios ya servidos en la sesion actual -- evita repetir el mismo ejercicio cuando hay
+  // varios candidatos empatados en dificultad (p. ej. un lote generado con la misma
+  // targetDifficulty para todos, ver GenerateExerciseBatchUseCase).
+  readonly excludeExerciseIds?: readonly ExerciseId[]
 }
 
 // Forma publica de un Exercise, sin correctAnswer/difficulty/explanation -- mismo criterio de
@@ -53,6 +58,8 @@ export class SelectNextExerciseUseCase {
     const narrow = await this.exercises.findByDifficultyBand({
       academicLevel: input.academicLevel,
       topic: input.topic,
+      type: input.type,
+      excludeIds: input.excludeExerciseIds,
       band: { min: userRating.value - SELECTION_BAND, max: userRating.value + SELECTION_BAND },
     })
 
@@ -62,6 +69,8 @@ export class SelectNextExerciseUseCase {
         : await this.exercises.findByDifficultyBand({
             academicLevel: input.academicLevel,
             topic: input.topic,
+            type: input.type,
+            excludeIds: input.excludeExerciseIds,
             band: { min: userRating.value - WIDENED_BAND, max: userRating.value + WIDENED_BAND },
           })
 

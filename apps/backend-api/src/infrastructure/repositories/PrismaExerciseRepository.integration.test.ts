@@ -78,6 +78,7 @@ describe('PrismaExerciseRepository (integration)', () => {
     const result = await repository.findByDifficultyBand({
       academicLevel: 'Primaria',
       topic: TEST_TOPIC,
+      type: 'Resolution',
       band: { min: 500, max: 750 },
     })
 
@@ -95,6 +96,7 @@ describe('PrismaExerciseRepository (integration)', () => {
     const all = await repository.findByDifficultyBand({
       academicLevel: exercise.academicLevel,
       topic: exercise.topic,
+      type: exercise.type,
       band: { min: 0, max: 3000 },
     })
     expect(all.filter((e) => e.id === exercise.id)).toHaveLength(1)

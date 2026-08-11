@@ -173,12 +173,17 @@ export function SessionScreen({ sessionId }: SessionScreenProps) {
   // Al pasar a un ejercicio nuevo (setExercise ya limpia hints en el store) se limpian tambien
   // resultado/respuesta/opcion elegida en el propio componente -- todas las pantallas de
   // ejercicio arrancan siempre en el mismo formato (bloques de pistas y solucion vacios).
+  // Dependencia en exerciseShownAt, no en exercise?.id -- UC-008 puede devolver el mismo
+  // ejercicio dos veces seguidas (hueco real: pool con pocos candidatos empatados en
+  // dificultad, ver GenerateExerciseBatchUseCase), y setExercise siempre actualiza
+  // exerciseShownAt aunque el ejercicio "nuevo" sea identico al anterior -- con exercise?.id
+  // como dependencia, ese caso no reseteaba nada y "Siguiente ejercicio" parecia no hacer nada.
   useEffect(() => {
     setResult(null)
     setSubmittedValue('')
     setSelectedOption(null)
     autoSubmittedRef.current = false
-  }, [exercise?.id])
+  }, [exerciseShownAt])
 
   function handleSubmit(value: string) {
     if (!exercise || !exerciseShownAt || result || submitAnswer.isPending) return

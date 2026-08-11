@@ -61,6 +61,7 @@ describe('SelectNextExerciseUseCase (UC-008)', () => {
       userId: 'user-1' as UserId,
       academicLevel: 'Secundaria',
       topic: 'aritmetica-mental',
+      type: 'Resolution',
     })
 
     expect(result.exercise.id).toBe('cercano')
@@ -74,6 +75,7 @@ describe('SelectNextExerciseUseCase (UC-008)', () => {
       userId: 'user-1' as UserId,
       academicLevel: 'Secundaria',
       topic: 'aritmetica-mental',
+      type: 'Resolution',
     })
 
     expect(result.exercise.id).toBe('banda-ampliada')
@@ -84,7 +86,12 @@ describe('SelectNextExerciseUseCase (UC-008)', () => {
     await exercises.save(anExercise({ id: 'fuera-de-banda' as ExerciseId, difficulty: { value: 1700 } }))
 
     await expect(
-      useCase.execute({ userId: 'user-1' as UserId, academicLevel: 'Secundaria', topic: 'aritmetica-mental' }),
+      useCase.execute({
+        userId: 'user-1' as UserId,
+        academicLevel: 'Secundaria',
+        topic: 'aritmetica-mental',
+        type: 'Resolution',
+      }),
     ).rejects.toThrow()
   })
 
@@ -96,6 +103,7 @@ describe('SelectNextExerciseUseCase (UC-008)', () => {
       userId: 'user-1' as UserId,
       academicLevel: 'Secundaria',
       topic: 'aritmetica-mental',
+      type: 'Resolution',
     })
 
     expect(result.exercise.id).toBe('en-rating-inicial')
@@ -105,8 +113,46 @@ describe('SelectNextExerciseUseCase (UC-008)', () => {
     await exercises.save(anExercise())
 
     await expect(
-      useCase.execute({ userId: 'no-existe' as UserId, academicLevel: 'Secundaria', topic: 'aritmetica-mental' }),
+      useCase.execute({
+        userId: 'no-existe' as UserId,
+        academicLevel: 'Secundaria',
+        topic: 'aritmetica-mental',
+        type: 'Resolution',
+      }),
     ).rejects.toThrow()
+  })
+
+  it('no devuelve un ejercicio de un type distinto al pedido (invariante Session.mode, ver Session.ts)', async () => {
+    await users.save(aUser({ ratings: new Map([['Secundaria', { value: 1200 }]]) }))
+    await exercises.save(anExercise({ id: 'test-empatado' as ExerciseId, type: 'Test', difficulty: { value: 1200 } }))
+    await exercises.save(
+      anExercise({ id: 'resolution-correcto' as ExerciseId, type: 'Resolution', difficulty: { value: 1200 } }),
+    )
+
+    const result = await useCase.execute({
+      userId: 'user-1' as UserId,
+      academicLevel: 'Secundaria',
+      topic: 'aritmetica-mental',
+      type: 'Resolution',
+    })
+
+    expect(result.exercise.id).toBe('resolution-correcto')
+  })
+
+  it('excluye los ejercicios ya servidos en la sesion actual', async () => {
+    await users.save(aUser({ ratings: new Map([['Secundaria', { value: 1200 }]]) }))
+    await exercises.save(anExercise({ id: 'ya-respondido' as ExerciseId, difficulty: { value: 1200 } }))
+    await exercises.save(anExercise({ id: 'todavia-no' as ExerciseId, difficulty: { value: 1200 } }))
+
+    const result = await useCase.execute({
+      userId: 'user-1' as UserId,
+      academicLevel: 'Secundaria',
+      topic: 'aritmetica-mental',
+      type: 'Resolution',
+      excludeExerciseIds: ['ya-respondido' as ExerciseId],
+    })
+
+    expect(result.exercise.id).toBe('todavia-no')
   })
 
   it('la respuesta no incluye correctAnswer, difficulty ni explanation', async () => {
@@ -117,6 +163,7 @@ describe('SelectNextExerciseUseCase (UC-008)', () => {
       userId: 'user-1' as UserId,
       academicLevel: 'Secundaria',
       topic: 'aritmetica-mental',
+      type: 'Resolution',
     })
 
     expect(result.exercise).not.toHaveProperty('correctAnswer')

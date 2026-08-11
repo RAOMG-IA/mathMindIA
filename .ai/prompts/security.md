@@ -3,6 +3,23 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+## 2026-08-11 — Revisión: UC-008 flujo 2b (reposición bajo demanda) + filtro `type`/exclusión
+
+**Contexto utilizado**: `AnswerController.ts` (`tryReplenishPool`), `SelectNextExerciseUseCase.ts`, `main.ts` (wiring de `GenerateExerciseBatchUseCase`), ADR-012.
+
+**Hallazgos**:
+1. **IA invocada por primera vez desde un camino de request de usuario real**: hasta ahora, UC-001 (generación) solo corría desde un script CLI manual, nunca desde `POST /answers`. `tryReplenishPool` solo se dispara cuando `SelectNextExerciseUseCase` falla incluso en banda ampliada y excluyendo ya respondidos — no en el camino feliz, pero es una superficie nueva: cada llamada real al LLM tiene coste (cuota del proveedor) y latencia (varios segundos).
+2. **Vector de coste/latencia, no de autorización**: un usuario en un Tema/nivel/`type` con pool muy escaso (o agotable respondiendo rápido) puede disparar `tryReplenishPool` repetidamente, una llamada real al LLM por cada `POST /answers` mientras el pool no se repone lo bastante rápido. No hay límite de frecuencia por usuario/sesión sobre esta ruta. Riesgo de coste (cuota del proveedor de IA) más que de seguridad clásica — señalado, no bloqueante para esta tarea; un rate-limit por sesión/usuario sobre `tryReplenishPool` sería la mitigación natural si el coste real lo justifica.
+3. **Contenido generado sigue validado igual que siempre**: `tryReplenishPool` reutiliza `GenerateExerciseBatchUseCase` tal cual (invariantes de `Exercise` vía `violatesExerciseInvariant`, sin cambios) — ningún contenido nuevo se persiste sin pasar por esa validación.
+4. **Sin superficie IDOR nueva**: `session.topic`/`session.academicLevel`/`session.mode` ya se leían de la `Session` (no del request) antes de este cambio; `excludeExerciseIds` sale de `AnswerRepository.findBySessionId(sessionId)`, la misma `Session` ya autorizada contra `userId` más arriba en `submitAnswer`.
+5. **Filtro por `type` es una corrección de seguridad de datos, no solo funcional**: antes, un usuario en Modo Resolución podía recibir un ejercicio `Test` como "siguiente" (con `options` que el cliente ignoraba) — no explotable (no expone `correctAnswer` ni nada sensible), pero sí una violación de la invariante de dominio documentada en `Session.ts`. Corregido.
+
+**Decisión tomada**: sin cambios de código adicionales — el hallazgo #2 (ausencia de rate-limit) se deja señalado, mismo criterio que otros trade-offs ya aceptados (p. ej. mensajes de error genéricos de IDOR, 2026-08-07). No bloqueante.
+
+**Output generado**: esta entrada.
+
+---
+
 ## 2026-08-11 — Revisión: `SessionSummaryScreen`
 
 **Contexto utilizado**: `apps/mobile-app/src/screens/SessionSummaryScreen.tsx`, `EndSessionUseCase.ts` (autorización ya cubierta en una revisión anterior), `queryKeys.ts`.

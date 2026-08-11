@@ -9,6 +9,15 @@
 	devueltos por el modelo. Los ejercicios inválidos se reintentan en bloques hasta `MAX_ATTEMPTS`.
 - La validación y las invariantes de dominio (`type='Test'` => 3 opciones y `correctAnswer ∈ options`)
 	siguen aplicándose; solo se persisten ejercicios que cumplen las invariantes.
+- **(2026-08-11)** Con `count > 1`, la `difficulty` de cada ejercicio ya no es un único valor fijo
+	(el punto medio del `difficultyRange`) repetido para los `count` — se reparte de forma determinista
+	a lo largo del rango (`min` → `max`, equiespaciado). Hueco real detectado: con todos los ejercicios
+	de un mismo lote empatados en dificultad exacta, [UC-008](UC-008-select-next-exercise.md) (que
+	elige "el más cercano al rating" y, ante empate, siempre el primero) devolvía siempre el mismo
+	ejercicio como "siguiente" — indistinguible de un botón roto para el usuario.
+- **(2026-08-11)** Ahora también se invoca desde `AnswerController` bajo demanda (UC-008 flujo 2b) cuando
+	el Exercise Pool se agota para un Tema/nivel/`type` en tiempo real, no solo desde el proceso batch
+	programado — ver referencia actualizada más abajo.
 
 `GenerateExerciseBatchUseCase`
 
@@ -48,5 +57,5 @@ Nuevo(s) `Exercise` disponibles en el Exercise Pool para ese Tema/AcademicLevel,
 
 ## Referencias
 
-- [ARCHITECTURE.md](../../ARCHITECTURE.md) — "Estrategia IA": este es el único punto donde la IA participa en la creación de contenido; no ocurre en el flujo de petición de un usuario (ver [UC-008](UC-008-select-next-exercise.md), que sí es determinista).
+- [ARCHITECTURE.md](../../ARCHITECTURE.md) — "Estrategia IA": punto principal donde la IA participa en la creación de contenido. [UC-008](UC-008-select-next-exercise.md) sigue siendo determinista en su camino feliz; desde 2026-08-11 puede disparar este UC como último recurso (flujo 2b) cuando el Pool se agota en tiempo real, no solo desde el proceso batch programado.
 - [ADR-014](../ADR/ADR-014_rag.md) — retrieval del material consolidado por [UC-011](UC-011-ingest-knowledge-base.md).

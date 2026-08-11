@@ -14,12 +14,15 @@ export class InMemoryExerciseRepository implements ExerciseRepository {
   }
 
   async findByDifficultyBand(query: FindByDifficultyBandQuery): Promise<readonly Exercise[]> {
+    const excludeIds = new Set(query.excludeIds ?? [])
     return [...this.exercises.values()].filter(
       (exercise) =>
         exercise.academicLevel === query.academicLevel &&
         exercise.topic === query.topic &&
+        exercise.type === query.type &&
         exercise.difficulty.value >= query.band.min &&
-        exercise.difficulty.value <= query.band.max,
+        exercise.difficulty.value <= query.band.max &&
+        !excludeIds.has(exercise.id),
     )
   }
 

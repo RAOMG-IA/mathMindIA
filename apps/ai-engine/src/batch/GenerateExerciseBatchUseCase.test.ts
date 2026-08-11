@@ -131,9 +131,31 @@ describe('GenerateExerciseBatchUseCase (UC-001)', () => {
     const all = await exercises.findByDifficultyBand({
       academicLevel: 'Primaria',
       topic: 'arit.suma-resta',
+      type: 'Test',
       band: { min: 0, max: 10000 },
     })
     expect(all).toHaveLength(0)
+  })
+
+  it('con count>1, reparte la dificultad a lo largo del rango del Tema en vez de repetirla (hueco real: UC-008 "siguiente ejercicio" repetia siempre el mismo con dificultades empatadas)', async () => {
+    const ia = new QueuedExerciseGenerator([
+      { statement: '1 + 1', correctAnswer: '2', explanation: '1 + 1 = 2' },
+      { statement: '2 + 2', correctAnswer: '4', explanation: '2 + 2 = 4' },
+      { statement: '3 + 3', correctAnswer: '6', explanation: '3 + 3 = 6' },
+    ])
+    const useCase = new GenerateExerciseBatchUseCase(
+      ia,
+      exercises,
+      new SequentialIdGenerator('exercise'),
+      new InMemoryKnowledgeBaseIndex(),
+    )
+
+    const result = await useCase.execute({ tema: aTema(), academicLevel: 'Primaria', type: 'Resolution', count: 3 })
+
+    expect(result.exercises).toHaveLength(3)
+    const difficulties = result.exercises.map((e) => e.difficulty.value)
+    expect(difficulties).toEqual([500, 625, 750]) // min, punto medio, max de 500-750
+    expect(new Set(difficulties).size).toBe(3)
   })
 
   it('lanza si el Tema no aplica al AcademicLevel pedido', async () => {

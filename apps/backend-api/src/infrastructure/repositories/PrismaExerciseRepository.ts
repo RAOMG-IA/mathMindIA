@@ -31,7 +31,9 @@ export class PrismaExerciseRepository implements ExerciseRepository {
       where: {
         academicLevel: query.academicLevel,
         topic: query.topic,
+        type: query.type,
         difficultyValue: { gte: query.band.min, lte: query.band.max },
+        ...(query.excludeIds && query.excludeIds.length > 0 ? { id: { notIn: [...query.excludeIds] } } : {}),
       },
     })
     return rows.map((row) => this.toDomain(row))

@@ -2,7 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { InMemoryHintUsageTracker, InMemoryTemaRepository } from '@mathmind/shared-testing'
-import { IAClient, LangChainChatModel } from '@mathmind/ai-engine'
+import { GenerateExerciseBatchUseCase, IAClient, LangChainChatModel } from '@mathmind/ai-engine'
 import type { ExerciseId } from '@mathmind/shared-domain'
 import { createRoutes } from './http/routes.js'
 import { isOriginAllowed, parseAllowedOrigins } from './http/corsConfig.js'
@@ -123,6 +123,23 @@ if (!hintGenerator) {
   console.warn('AI_API_KEY/AI_BASE_URL not set -- POST /hints will fail until configured.')
 }
 
+// UC-008 flujo 2b (AnswerController.tryReplenishPool): reposicion bajo demanda del Exercise
+// Pool cuando se agota para un Tema/nivel/type. Sin AI_API_KEY/AI_BASE_URL, se rinde con
+// gracia (mismo criterio que hintGenerator arriba) -- nextExercise simplemente se omite, como
+// ya pasaba antes de que existiera esta capacidad.
+const generateExerciseBatchUseCase = new GenerateExerciseBatchUseCase(
+  chatModel
+    ? new IAClient(chatModel)
+    : {
+        generateExercise: () => {
+          throw new Error('IAClient not configured (missing AI_API_KEY/AI_BASE_URL)')
+        },
+      },
+  exercises,
+  idGenerator,
+  knowledgeBase,
+)
+
 const updateDifficultyUseCase = new UpdateDifficultyUseCase(exercises)
 const selectNextExerciseUseCase = new SelectNextExerciseUseCase(exercises, users)
 
@@ -148,6 +165,9 @@ const controllers = {
     selectNextExerciseUseCase,
     hintUsage,
     sessions,
+    answers,
+    temas,
+    generateExerciseBatchUseCase,
   ),
   hint: new HintController(
     new GenerateHintUseCase(
