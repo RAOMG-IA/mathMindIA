@@ -40,8 +40,6 @@ export function AppHeader() {
         <TouchableOpacity
           style={styles.navButton}
           accessibilityRole="button"
-          // (app)/statistics todavia no existe (pantalla pendiente, ADR-015).
-          // @ts-expect-error -- ruta real pendiente de construir
           onPress={() => router.push('/(app)/statistics')}
         >
           <Text style={styles.navButtonText}>Estadísticas</Text>

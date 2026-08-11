@@ -27,4 +27,14 @@ Enlaza de vuelta a `(auth)/login`. El `@ts-expect-error` que protegía la ruta `
 
 `EmailInput`/`PasswordInput` sustituyen los `TextInput` inline que antes tenía cada pantalla (`field`/`label`/`input`/`inputError`/`errorText` estaban duplicados byte a byte entre `LoginScreen.styles.ts` y `RegisterScreen.styles.ts`). Puramente presentacionales — `value`/`onChangeText`/`error`, sin validación de formato ni de red dentro; cada pantalla sigue validando con su propio `*.validation.ts` y decide a qué campo atribuir cada error de servidor (ver arriba). `PasswordInput` revela el valor al mantener pulsado (`Pressable` con `onHoverIn`/`onHoverOut` + `onPressIn`/`onPressOut`), no al alternar.
 
-Pendiente: Home, Ejercicio, Resumen, Estadísticas.
+## `StatisticsScreen` (US-007)
+
+Pantalla de solo lectura: sin formulario ni mutación, consume únicamente `useUserStatistics` (misma query key/cache que `AppHeader`, ADR-015 — no se pide el dato dos veces).
+
+El DTO (`GetUserStatisticsResponseDto`) solo expone `byTopic` plano: `strengths`/`weaknesses` se calculan en el propio backend (`GetUserStatisticsUseCase`) pero no se serializan. `StatisticsScreen.validation.ts` (`deriveTopicBreakdown`, TDD 6/6) los deriva en el cliente — ordena por `accuracy` y filtra por `MIN_ATTEMPTS_FOR_RANKING = 3`, replicando a mano el umbral `MIN_ATTEMPTS_PER_TOPIC` del backend (sin constante compartida entre ambos lados, hay que sincronizarlo manualmente si cambia).
+
+Tres estados cubren los tres escenarios de US-007: tarjeta de score/nivel/rating siempre visible mientras haya `data` (independiente del historial); desglose por tema con badges "Fuerte"/"A mejorar" cuando `byTopic.length > 0`; tarjeta de estado vacío explícita cuando `byTopic.length === 0` (US-007, "Usuario sin historial" — una respuesta 200 con array vacío, nunca un error). La barra de accuracy es un `View` con `width` en porcentaje, sin librería de gráficos (no hay ninguna en el repo y no se justifica para una sola pantalla).
+
+El `@ts-expect-error` que protegía la ruta `/(app)/statistics` en `AppHeader.tsx` se quitó al crear esta pantalla, mismo motivo que en `RegisterScreen`.
+
+Pendiente: Ejercicio, Resumen.
