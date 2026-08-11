@@ -18,7 +18,8 @@
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "metrics": "tsx scripts/metrics/trazabilidad.ts"
   },
   "devDependencies": {
     "turbo": "^2.1.0",

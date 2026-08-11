@@ -3,6 +3,15 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+---
+task_id: STATUS-047
+date: 2026-08-10
+agentes: [security]
+flujo: [architecture, developer, security]
+artefactos: [apps/backend-api/src/presentation/http/corsConfig.ts, apps/backend-api/src/presentation/main.ts]
+estado: done
+---
+
 ## 2026-08-10 — Revisión: CORS (`CORS_ALLOWED_ORIGINS`)
 
 **Contexto utilizado**: `apps/backend-api/src/presentation/http/corsConfig.ts`, `main.ts`, `.env.example`, ADR-012 adenda CORS.
@@ -20,6 +29,15 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+---
+task_id: STATUS-046
+date: 2026-08-10
+agentes: [security]
+flujo: [architecture, developer, security]
+artefactos: [apps/backend-api/src/presentation/http/TemaController.ts, apps/backend-api/src/infrastructure/seed/temaCatalog.ts, apps/mobile-app/src/screens/HomeScreen.tsx]
+estado: done
+---
+
 ## 2026-08-10 — Revisión: `GET /temas` + `(app)/home.tsx`
 
 **Contexto utilizado**: `apps/backend-api/src/presentation/http/{TemaController.ts,routes.ts}`, `apps/backend-api/src/infrastructure/seed/temaCatalog.ts`, `apps/mobile-app/src/screens/HomeScreen.{tsx,validation.ts}`, ADR-012.
@@ -34,6 +52,15 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 **Output generado**: esta entrada.
 
+---
+
+---
+task_id: STATUS-045
+date: 2026-08-10
+agentes: [security]
+flujo: [developer, security]
+artefactos: [apps/mobile-app/src/store/sessionRouting.ts, apps/mobile-app/app/(app)/_layout.tsx, apps/mobile-app/src/api/fetchClient.ts]
+estado: done
 ---
 
 ## 2026-08-10 — Revisión: `app/(app)/_layout.tsx` (guard + header global)
@@ -55,6 +82,15 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+---
+task_id: STATUS-041
+date: 2026-08-09
+agentes: [security]
+flujo: [security]
+artefactos: [packages/shared-utils/src/index.ts, apps/mobile-app/src/screens/LoginScreen.tsx, apps/mobile-app/.env.example]
+estado: done
+---
+
 ## 2026-08-09 — Revisión retroactiva: shared-utils (email/password) + LoginScreen
 
 **Input**: El usuario detectó que Security no había registrado ninguna entrada para la tarea de `LoginScreen`/`shared-utils` ("security no ha escrito accion alguna") pese a tocar validación de credenciales — mismo tipo de hueco de proceso ya detectado una vez en la sesión (STATUS.md #28: Reviewer/Security nunca invocados). Revisión real contra el checklist de esta skill (OWASP Top 10, gestión de secretos, validación de inputs, dependencias, cumplimiento ADR-012), no solo un registro de trámite.
@@ -74,6 +110,15 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+---
+task_id: STATUS-011
+date: 2026-08-05
+agentes: [security]
+flujo: [security]
+artefactos: [docs/ADR/ADR-012_linea_base_seguridad.md, .ai/AGENTS.md]
+estado: done
+---
+
 ## 2026-08-05 — ADR-012 Línea Base de Seguridad (sustituye a docs/ADR/Security/)
 
 **Input**: El usuario añadió una sección "Línea base de seguridad" en `.ai/AGENTS.md` y un paquete de 5 ADR (`docs/ADR/Security/`, ADR-007 a ADR-011: aislamiento de secretos, prompt injection, RBAC de agentes, filtrado de contexto, clasificación de datos LLM) pidiendo revisión y feedback.
@@ -86,6 +131,15 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+---
+task_id: STATUS-017
+date: 2026-08-06
+agentes: [security]
+flujo: [architecture, security]
+artefactos: [.ai/skills/*.md, .ai/AGENTS.md]
+estado: done
+---
+
 ## 2026-08-06 — Revisión de `.ai/skills/*.md` + referencias a ADR-012
 
 **Input**: Solicitud de revisar si las 11 skills (`.ai/skills/`) están bien definidas. Se encontraron 5 problemas reales (no solo de estilo): (1) ruta `Architecture.md` mal escrita (debía ser `ARCHITECTURE.md`) repetida en varias skills y en `AGENTS.md`; (2) aparente contradicción entre `security.md` ("no introducir nuevas dependencias") y `ADR-012` (exige bcrypt/argon2) — descartada tras aclaración del usuario: Security Agent audita, Developer Agent implementa (sin esa restricción); (3) `reviewer.md` asume flujo de Pull Request pese a que el repo no está inicializado como git (`git status` verificado); (4) solape de `Salidas` entre `architecture.md` y `documentation.md` (ambas reclaman ADRs/ARCHITECTURE.md); (5) ejemplos de `knowledge-manager.md` desincronizados del código real (citan "ADR-003 Exercise Caching Strategy" inexistente, "Difficulty Calculator" en vez de `AdaptiveDifficultyEngine`, convención `.spec.ts` cuando el proyecto usa `.test.ts`).
@@ -96,6 +150,15 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 **Output generado**: `.ai/skills/{architecture,director,orchestrator,knowledge-manager}.md` (fix de ruta), `.ai/AGENTS.md` (fix de ruta), y las 11 skills en `.ai/skills/` con referencia a ADR-012 añadida.
 
+---
+
+---
+task_id: STATUS-028
+date: 2026-08-07
+agentes: [security]
+flujo: [developer, reviewer, security, documentation]
+artefactos: [apps/backend-api/src/application/use-cases/RegisterUseCase.ts, apps/backend-api/src/application/use-cases/LoginUseCase.ts, apps/backend-api/src/infrastructure/auth/JwtTokenIssuer.ts]
+estado: done
 ---
 
 ## 2026-08-07 — Primera pasada real sobre código de autenticación (Register/Login, JWT, bcrypt, IDOR)

@@ -3,6 +3,16 @@ Decompose tasks and coordinate agent execution workflow.
 
 ---
 
+---
+task_id: STATUS-029
+date: 2026-08-07
+handoff_ref: STATUS-029
+agentes: [orchestrator]
+flujo: [orchestrator, architecture, documentation]
+artefactos: [docs/ADR-002_Agentes.md, .ai/AGENTS.md, docs/STATUS.md]
+estado: done
+---
+
 ## 2026-08-07 — Primer handoff real: Contrato de Handoff obligatorio (dogfooding)
 
 **Input**: tras detectar que Director/Orchestrator/Knowledge Manager nunca habían gestionado ninguna tarea real (ver `STATUS.md` #28/#29), el usuario propuso un contrato de handoff estructurado para forzarlo mecánicamente. Este es el primer handoff registrado de verdad — el de definir el propio contrato.
@@ -45,6 +55,16 @@ handoff:
 
 ---
 
+---
+task_id: STATUS-030
+date: 2026-08-07
+handoff_ref: STATUS-030
+agentes: [orchestrator]
+flujo: [orchestrator, knowledge, product]
+artefactos: [docs/user-stories/US-008-subir-material-rag.md, docs/user-stories/README.md]
+estado: done
+---
+
 ## 2026-08-07 — Segundo handoff real: US-008 Consolidar Base de Conocimiento (RAG)
 
 **Input**: el usuario pidió una User Story para `ai-engine` que permita subir ficheros (bancos de problemas, notas, pistas) para consolidar RAG.
@@ -83,6 +103,15 @@ handoff:
 
 **Output generado**: `docs/user-stories/US-008-subir-material-rag.md`, `docs/user-stories/README.md` (índice + nota de trazabilidad), `.ai/prompts/product.md`.
 
+---
+
+---
+task_id: STATUS-051
+date: 2026-08-10
+handoff_ref: STATUS-051
+agentes: [orchestrator]
+flujo: [orchestrator, architecture, test, developer, reviewer, security, devops, documentation]
+estado: done
 ---
 
 ## 2026-08-10 — Tercer handoff real: entorno de desarrollo Docker (infraestructura + Node)

@@ -3,6 +3,15 @@ Review code quality, architecture compliance, complexity and SOLID principles.
 
 ---
 
+---
+task_id: STATUS-028
+date: 2026-08-07
+agentes: [reviewer]
+flujo: [developer, reviewer, security, documentation]
+artefactos: [apps/backend-api/src/presentation/http/routes.ts, apps/backend-api/src/presentation/main.ts, apps/backend-api/src/presentation/http/AnswerController.ts]
+estado: done
+---
+
 ## 2026-08-07 — Primera pasada real (backend/auth: Register/Login, 5 Controllers, adaptadores de auth)
 
 **Input**: El usuario detectó que Reviewer y Security nunca se habían invocado en el proyecto pese a que `.ai/AGENTS.md` los exige como fases obligatorias del flujo ("Ninguna fase puede omitirse"). Este archivo llevaba desde su creación con la cabecera equivocada ("# Test Agent", corregida en esta misma entrada) — señal adicional de que nunca se había usado de verdad.

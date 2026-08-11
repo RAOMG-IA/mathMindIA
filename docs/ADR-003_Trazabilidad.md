@@ -6,6 +6,8 @@ Aceptado
 
 ## Contexto
 
+> **Adenda 2026-08-10 (ADR-017)**: la Regla de Trazabilidad de este ADR define el registro en prosa (Input/Contexto/Decisión/Output). [ADR-017_trazabilidad_y_metricas.md](ADR/ADR-017_trazabilidad_y_metricas.md) la extiende con un front-matter YAML por entrada (`task_id`, `date`, `agentes`, `flujo`, `estado` obligatorios; `handoff_ref`/`artefactos`/`tests`/`cobertura` recomendados; `rework_de` condicional) para que la gobernanza sea medible (KPIs de las skills) y no solo descrita. La prosa aquí definida no cambia; el YAML la complementa.
+
 Con un sistema multiagente ([ADR-002](ADR-002_Agentes.md)) generando gran parte del código y la documentación de MathMind AI, se necesitan reglas explícitas y verificables que eviten dos riesgos: implementar sin cobertura de tests ni diseño previo, y duplicar entidades/utilidades ya existentes en `packages/shared-*`. Además, cada decisión tomada por un agente debe quedar auditable.
 
 ## Decisión

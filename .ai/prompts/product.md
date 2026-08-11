@@ -3,6 +3,15 @@ Generate user stories, acceptance criteria, backlog and roadmap.
 
 ---
 
+---
+task_id: STATUS-004
+date: 2026-08-05
+agentes: [product]
+flujo: [product]
+artefactos: [docs/user-stories/]
+estado: done
+---
+
 ## 2026-08-05 — User Stories US-001 a US-007
 
 **Input**: Organizar las User Stories candidatas de STATUS.md (pendiente #4) en `docs/user-stories/*`, un archivo por historia.
@@ -13,6 +22,16 @@ Generate user stories, acceptance criteria, backlog and roadmap.
 
 **Output generado**: [docs/user-stories/](../../docs/user-stories/) (README índice + US-001 a US-007).
 
+---
+
+---
+task_id: STATUS-030
+date: 2026-08-07
+handoff_ref: STATUS-030
+agentes: [product]
+flujo: [orchestrator, knowledge, product]
+artefactos: [docs/user-stories/US-008-subir-material-rag.md, docs/user-stories/README.md]
+estado: done
 ---
 
 ## 2026-08-07 — US-008: Consolidar Base de Conocimiento (RAG)
@@ -27,6 +46,16 @@ Generate user stories, acceptance criteria, backlog and roadmap.
 
 ---
 
+---
+task_id: STATUS-030
+date: 2026-08-07
+handoff_ref: STATUS-030
+agentes: [product]
+flujo: [orchestrator, knowledge, product]
+artefactos: [docs/user-stories/US-008-subir-material-rag.md]
+estado: done
+---
+
 ## 2026-08-07 — US-008: redefinición del actor y del flujo (directorio local, sin API de subida)
 
 **Input**: el usuario corrigió la primera versión — `ai-engine` no depende de ningún usuario de la aplicación; la subida es un directorio local configurado donde se depositan ficheros, que se mueven a un directorio de histórico tras procesarse, registrando fecha y estado en base de datos. Al ser acceso local al servidor, quien deposita ficheros ya es de facto administrador del sistema.
@@ -37,6 +66,16 @@ Generate user stories, acceptance criteria, backlog and roadmap.
 
 **Output generado**: `docs/user-stories/US-008-subir-material-rag.md` (reescrita), `docs/user-stories/README.md` (actor y nota actualizados).
 
+---
+
+---
+task_id: STATUS-030
+date: 2026-08-07
+handoff_ref: STATUS-030
+agentes: [product]
+flujo: [orchestrator, knowledge, product]
+artefactos: [docs/user-stories/US-008-subir-material-rag.md]
+estado: done
 ---
 
 ## 2026-08-07 — US-008: configuración por .env, script de DevOps y cron — registradas en "Fuera de alcance", no en el cuerpo de la historia

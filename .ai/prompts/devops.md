@@ -6,7 +6,15 @@ Docker, CI/CD, GitHub Actions and deployment pipelines.
 
 # DevOps Agent - Trazabilidad
 
-## 2026-08-10: Verificación del entorno contenedorizado (ADR-016)
+---
+task_id: STATUS-051
+date: 2026-08-10
+agentes: [devops]
+flujo: [orchestrator, architecture, test, developer, reviewer, security, devops, documentation]
+estado: done
+---
+
+## 2026-08-10 — Verificación del entorno contenedorizado (ADR-016)
 
 **Contexto:** Entorno Docker Compose (postgres pgvector en 5433, redis 6379, node) con volumen `node_modules` Linux. Backend en `tsx watch` dentro de `mathmindia-node`. Host Windows con Postgres local en 5432 (no se toca).
 

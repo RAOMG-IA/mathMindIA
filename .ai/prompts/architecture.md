@@ -3,6 +3,27 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 
 ---
 
+---
+task_id: STATUS-052
+date: 2026-08-10
+agentes: [architecture]
+flujo: [architecture, documentation]
+artefactos: [docs/ADR/ADR-017_trazabilidad_y_metricas.md]
+estado: done
+---
+
+## 2026-08-10 — ADR-017 Trazabilidad estructurada y métricas (fusión de diseños)
+
+**Input**: el usuario pidió diseñar un ADR para convertir la trazabilidad de `.ai/prompts/*.md` de prosa a datos (front-matter YAML por entrada: `task_id`, `handoff_ref`, `agentes`, `artefactos`, `tests`) y poder computar los KPIs que las skills definen pero nunca miden (% handoff completo, % Reviewer/Security, tasa de retrabajo, cobertura) — gobernanza medida, material académico diferencial del TFM.
+
+**Conflicto detectado durante el trabajo**: el pipeline paralelo (otro agente, commit `6828d48`) había creado su propio `ADR-017_trazabilidad_y_metricas.md` con un schema y decisiones divergentes, y además había descartado mi ADR-017 de Hugging Face (renumerado; HF quedó como configuración en `.env.example`). Presentado al usuario con las diferencias; resuelto vía AskUserQuestion: **fusionar sobre el ADR-017 del pipeline** incorporando las dos decisiones del usuario que el diseño original no incluía — **migración retroactiva** de toda la historia (baseline de KPIs desde el día 1) y **cobertura en dos capas** (declarada por entrada ahora, real con `@vitest/coverage-v8` a futuro). Se aceptó el descarte de HF como configuración.
+
+**Decisión tomada** (resumen del ADR, ver fichero): front-matter YAML por entrada (obligatorios `task_id` `STATUS-<n>`, `date`, `agentes`, `flujo`, `estado`; recomendados `handoff_ref`, `artefactos`, `tests`, `cobertura`; condicional `rework_de`; invariante `agentes ⊆ flujo`, con `flujo` como propiedad de la tarea). 10 KPIs con fórmulas. Herramienta **única**: `scripts/metrics/trazabilidad.ts` con modos (KPIs por defecto, `--report`, `--lint` pre-flight), parser propio de subconjunto YAML sin dependencia nueva, sustituible por `js-yaml` sin cambiar el esquema. Migración retroactiva + entradas nuevas obligatorias + exemplares (esta entrada es el segundo exemplar; el primero está en `documentation.md`). Adenda de referencia cruzada en ADR-003. Sin código productivo tocado.
+
+**Output generado**: [docs/ADR/ADR-017_trazabilidad_y_metricas.md](../../docs/ADR/ADR-017_trazabilidad_y_metricas.md) (base del pipeline + adenda de fusión), adenda en `docs/ADR-003_Trazabilidad.md`, exemplar en `.ai/prompts/documentation.md`. Retirado `docs/ADR/ADR-018_trazabilidad_y_metricas.md` (versión descartada en la fusión). Estado: Propuesto.
+
+---
+
 ## 2026-08-10 — Adenda ADR-012: CORS (`CORS_ALLOWED_ORIGINS`)
 
 **Input**: el usuario reportó que el registro fallaba por CORS al probar `mobile-app` (Expo Web, `:8081`) contra `backend-api` real (`:3000`) — orígenes distintos, sin ninguna cabecera CORS en las respuestas del backend. Pidió una allowlist configurable por `.env`, explícito en no comprometer la privacidad (sin wildcard).
