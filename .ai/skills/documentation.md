@@ -9,7 +9,7 @@ Mantener documentación viva.
 ## Responsabilidades
 
 - README.
-- Diagramas.
+- Diagramas de README.md (onboarding/estructura del repo — distinto de los diagramas técnicos/de dominio en ADRs/ARCHITECTURE.md, responsabilidad de Architecture Agent).
 - Índice y coherencia de referencias entre ADRs (no redacta su contenido — es responsabilidad de Architecture Agent, ver ARCHITECTURE.md).
 - Informar de los ficheros modificados en cada tarea.
 
@@ -23,7 +23,7 @@ Mantener documentación viva.
 
 ## Salidas
 
-- Documentación generada (README, diagramas, índices) actualizada.
+- Documentación generada (README, diagramas de README.md, índices) actualizada.
 - Resumen de ficheros modificados por tarea.
 
 ---

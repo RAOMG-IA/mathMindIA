@@ -3,6 +3,23 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+## 2026-08-12 — Cierre de hallazgo: puntos 3/4/5 de la revisión de skills (2026-08-06)
+
+**Input**: el usuario pidió revisar el estado de "solape de Salidas entre architecture.md/documentation.md" y "ejemplos desincronizados en knowledge-manager.md", listados como pendientes desde la revisión de `.ai/skills/*.md` del 2026-08-06 (STATUS-017: "Puntos 3, 4 y 5 quedan pendientes de confirmación del usuario, no resueltos todavía").
+
+**Verificación (antes de tocar nada)**:
+- **Punto 4 (solape ADRs/ARCHITECTURE.md)**: ya resuelto en el contenido — `architecture.md` línea 14 y `documentation.md` líneas 13/53 disambiguan con claridad quién redacta qué, sin contradicción. Se corrigió en algún momento posterior a 2026-08-06 sin cerrar formalmente este hallazgo.
+- **Punto 5 (ejemplos desincronizados en `knowledge-manager.md`)**: ya resuelto — `grep` de "ADR-003", "Difficulty Calculator" y `.spec.ts` no devuelve resultados; los ejemplos actuales citan `AdaptiveDifficultyEngine`/`computeNextDifficulty`/ADR-005/ADR-006/ADR-013 (reales), y la línea 271 aclara explícitamente la convención `.test.ts` real.
+- **Punto 3 (`reviewer.md` asume flujo de Pull Request pese a que el repo no estaba inicializado como git)**: **no verificado en esta tarea** — el usuario no lo mencionó, fuera del alcance pedido. Sigue listado como "Pull Request" en `reviewer.md` (Entradas); el repo ya es un git real con commits activos, pero no se ha confirmado si el resto del contenido de `reviewer.md` sigue siendo coherente con eso. Queda como hallazgo abierto, no cerrado aquí.
+
+**Hallazgo nuevo, no registrado en 2026-08-06**: ambas skills seguían listando "Diagramas" sin cualificar en `Responsabilidades`/`Salidas` — sin contradicción práctica (Mermaid de ADRs vive en Architecture, diagramas de README en Documentation, confirmado con `grep`), pero sí ambigüedad en la definición escrita.
+
+**Decisión tomada**: cualificado el bullet "Diagramas" en ambas skills (`architecture.md`: "Diagramas técnicos/de dominio... dentro de ADRs y ARCHITECTURE.md"; `documentation.md`: "Diagramas de README.md... distinto de los diagramas técnicos/de dominio en ADRs/ARCHITECTURE.md"), en Responsabilidades y Salidas de ambas. Puntos 4 y 5 del hallazgo original se dan por cerrados. Punto 3 permanece abierto.
+
+**Output generado**: `.ai/skills/architecture.md`, `.ai/skills/documentation.md`. Esta entrada.
+
+---
+
 ## 2026-08-11 — Revisión: UC-008 flujo 2b (reposición bajo demanda) + filtro `type`/exclusión
 
 **Contexto utilizado**: `AnswerController.ts` (`tryReplenishPool`), `SelectNextExerciseUseCase.ts`, `main.ts` (wiring de `GenerateExerciseBatchUseCase`), ADR-012.
