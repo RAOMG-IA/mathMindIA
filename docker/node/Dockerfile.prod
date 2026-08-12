@@ -1,0 +1,72 @@
+# Imagen de PRODUCCION del monorepo MathMind AI (backend-api + ai-engine + packages).
+# Ver docs/DEPLOY_AWS_FREE_TIER.md.
+#
+# A diferencia del Dockerfile de desarrollo (dev bind mount, tsx watch), esta imagen
+# compila TypeScript a dist con tsc (turbo) y arranca el proceso con node.
+#
+# Importante: los paquetes del workspace (@mathmind/*) exportan TS source vía `main`
+# (package.json -> ./src/index.ts). tsc compila cada paquete a su propio dist/ y
+# backend-api a apps/backend-api/dist. Como el resolution de Node sigue el campo `main`
+# de cada paquete, el arranque en runtime NO puede usar `node dist/...` puro (fallaria
+# al importar .ts). Solucion: se arranca con `node --import tsx` (tsx como loader ESM),
+# que transpila los imports de los paquetes del workspace en caliente y ejecuta el dist
+# compilado del backend. tsx ya es devDependency del monorepo, por lo que no introduce
+# dependencias nuevas.
+
+FROM node:22 AS deps
+
+WORKDIR /workspace
+
+# 1) Solo manifiestos + lockfile para cachear npm ci.
+COPY package.json package-lock.json ./
+COPY tsconfig.base.json turbo.json ./
+COPY apps/backend-api/package.json apps/backend-api/package.json
+COPY apps/ai-engine/package.json apps/ai-engine/package.json
+COPY packages/shared-config/package.json packages/shared-config/package.json
+COPY packages/shared-constants/package.json packages/shared-constants/package.json
+COPY packages/shared-domain/package.json packages/shared-domain/package.json
+COPY packages/shared-testing/package.json packages/shared-testing/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
+COPY packages/shared-utils/package.json packages/shared-utils/package.json
+
+RUN npm ci
+
+# 2) Esquema de Prisma (para generar el cliente).
+COPY database ./database
+
+# 3) Fuentes de los paquetes del workspace.
+COPY packages ./packages
+COPY apps/ai-engine ./apps/ai-engine
+
+# 4) Fuentes de backend-api + build con turbo (compila dependencias ^build primero).
+COPY apps/backend-api ./apps/backend-api
+
+ENV DATABASE_URL="postgresql://mathmind:mathmind@localhost:5432/mathmindia"
+
+RUN npx prisma generate --schema database/schema.prisma
+RUN npx turbo run build --filter=@mathmind/backend-api
+
+# ---------- Runtime ----------
+FROM node:22 AS runtime
+
+WORKDIR /workspace
+
+ENV NODE_ENV=production
+
+# Node_modules completo (incluye devDeps: tsx es devDep, necesario como loader).
+COPY --from=deps /workspace/node_modules ./node_modules
+# paquetes del workspace ya compilados (main apunta a src/index.ts, pero el loader tsx
+# transpila; mantener src + dist por si algo resuelve dist).
+COPY --from=deps /workspace/packages ./packages
+COPY --from=deps /workspace/apps/ai-engine ./apps/ai-engine
+# dist del backend + prisma.config + schema para migrate deploy.
+COPY --from=deps /workspace/apps/backend-api ./apps/backend-api
+COPY --from=deps /workspace/database ./database
+COPY --from=deps /workspace/package.json ./package.json
+COPY --from=deps /workspace/tsconfig.base.json ./tsconfig.base.json
+
+WORKDIR /workspace/apps/backend-api
+
+# Migraciones en arranque + proceso en dist con loader tsx (no `npm start` puro: los
+# imports de @mathmind/* son TS source y el loader los transpila).
+CMD ["sh", "-c", "npx prisma migrate deploy --schema ../../database/schema.prisma && node --import tsx dist/presentation/main.js"]

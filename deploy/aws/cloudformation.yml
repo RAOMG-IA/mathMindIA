@@ -1,0 +1,238 @@
+# CloudFormation: infraestructura free tier de MathMind AI (MVP de pruebas).
+# Despliega en una sola pila: VPC + subnet pública, SecurityGroup (SSH restringido,
+# puerto 3000 abierto), EC2 t2.micro (free tier 750h/mes), Elastic IP y el bootstrap
+# que instala Docker y levanta docker-compose.prod.yml (postgres + redis + backend).
+#
+# Coste: 0 $ mientras se use la free tier (t2.micro, 30GB gp3, 1 EIP asociado).
+# Ver docs/DEPLOY_AWS_FREE_TIER.md para el paso a paso en la consola.
+#
+# Despliegue CLI:
+#   aws cloudformation create-stack \
+#     --stack-name mathmindia \
+#     --template-body file://deploy/aws/cloudformation.yml \
+#     --parameters ParameterKey=KeyName,ParameterValue=TU_KEY \
+#                  ParameterKey=AdminIpCidr,ParameterValue=TU_IP/32 \
+#     --capabilities CAPABILITY_IAM
+#
+# El contenido de user-data.sh se inyecta en UserData (la plantilla es la fuente de
+# verdad para CloudFormation; deploy/aws/user-data.sh es su copia de referencia).
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: MathMind AI MVP - infraestructura AWS Free Tier (EC2 t2.micro + Docker Compose)
+
+Parameters:
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Par de claves EC2 existente para SSH (crear en EC2 > Key Pairs).
+  AdminIpCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: IP/CIDR autorizada para SSH (mejor la IP pública del operador, p. ej. 203.0.113.7/32).
+    AllowedPattern: '^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$'
+  InstanceType:
+    Type: String
+    Default: t2.micro
+    Description: Instancia EC2. t2.micro es free tier (750h/mes); no usar mayores para coste 0.
+    AllowedValues: [t2.micro, t3.micro]
+  RepoUrl:
+    Type: String
+    Default: https://github.com/RAOMG-IA/mathMindIA.git
+    Description: URL git del monorepo a desplegar.
+  GitRef:
+    Type: String
+    Default: master
+    Description: Rama/tag a desplegar.
+  GitHubToken:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: Token (PAT) si el repo es privado; vacío si es público.
+  AiApiKey:
+    Type: String
+    NoEcho: true
+    Default: ""
+    Description: AI_API_KEY (opcional; sin él POST /hints fallará).
+  AiBaseUrl:
+    Type: String
+    Default: ""
+  AiModelName:
+    Type: String
+    Default: ""
+  CorsAllowedOrigins:
+    Type: String
+    Default: ""
+    Description: Origen(es) de navegador permitidos (coma-separados). Vacío = solo clientes nativos/sin Origin.
+  # Última Amazon Linux 2023. El nombre del parámetro SSM público es idéntico en todas
+  # las regiones; CloudFormation resuelve el AMI concreto en tiempo de despliegue.
+  AmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64
+
+Resources:
+  Vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      Tags: [{ Key: Name, Value: mathmindia-vpc }]
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags: [{ Key: Name, Value: mathmindia-igw }]
+
+  VpcGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref Vpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref Vpc
+      CidrBlock: 10.0.0.0/24
+      MapPublicIpOnLaunch: false
+      Tags: [{ Key: Name, Value: mathmindia-subnet }]
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref Vpc
+      Tags: [{ Key: Name, Value: mathmindia-rtb }]
+
+  RouteToInternet:
+    Type: AWS::EC2::Route
+    DependsOn: VpcGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  SubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref RouteTable
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: MathMind AI - SSH (operador) + API :3000 (publico)
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AdminIpCidr
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+      Tags: [{ Key: Name, Value: mathmindia-sg }]
+
+  ElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags: [{ Key: Name, Value: mathmindia-eip }]
+
+  # AMI resuelto en tiempo de despliegue desde el parámetro SSM (ver Parameters.AmiId).
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref AmiId
+      KeyName: !Ref KeyName
+      SubnetId: !Ref PublicSubnet
+      SecurityGroupIds: [!Ref SecurityGroup]
+      # 30GB gp3 = límite free tier de EBS.
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+          exec > >(tee /var/log/mathmindia-bootstrap.log) 2>&1
+          echo "[bootstrap] Inicio $(date -u)"
+          sudo dnf install -y docker
+          sudo systemctl enable --now docker
+          sudo usermod -aG docker ec2-user
+          docker version
+          APP_DIR=/opt/mathmindia
+          sudo mkdir -p "$APP_DIR"
+          if [ -d "$APP_DIR/.git" ]; then
+            echo "[bootstrap] Repo ya presente -> git pull"
+            sudo git -C "$APP_DIR" fetch --all
+            sudo git -C "$APP_DIR" reset --hard "origin/${GitRef}"
+          else
+            echo "[bootstrap] Clonando ${RepoUrl}"
+            if [ -n "${GitHubToken}" ]; then
+              AUTH_URL="https://x-access-token:${GitHubToken}@$(echo '${RepoUrl}' | sed 's|https://||')"
+              sudo git clone --branch '${GitRef}' --depth 1 "$AUTH_URL" "$APP_DIR"
+            else
+              sudo git clone --branch '${GitRef}' --depth 1 '${RepoUrl}' "$APP_DIR"
+            fi
+          fi
+          ENV_FILE="$APP_DIR/.env.prod"
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "[bootstrap] Generando secretos en .env.prod (chmod 600)"
+            PG_PASS="$(openssl rand -hex 16)"
+            JWT_SECRET="$(openssl rand -hex 32)"
+            cat > "$ENV_FILE" <<EOF
+          POSTGRES_USER=mathmind
+          POSTGRES_PASSWORD=$PG_PASS
+          POSTGRES_DB=mathmindia
+          JWT_SECRET=$JWT_SECRET
+          AI_API_KEY=${AiApiKey}
+          AI_BASE_URL=${AiBaseUrl}
+          AI_MODEL_NAME=${AiModelName}
+          CORS_ALLOWED_ORIGINS=${CorsAllowedOrigins}
+          EOF
+            sudo chmod 600 "$ENV_FILE"
+          else
+            echo "[bootstrap] .env.prod ya existe -> no se regenera"
+          fi
+          echo "[bootstrap] docker compose build + up -d"
+          cd "$APP_DIR"
+          sudo docker compose --env-file "$ENV_FILE" -f docker-compose.prod.yml up -d --build
+          echo "[bootstrap] Esperando /health en :3000"
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then
+              echo "[bootstrap] API OK tras ${!i}x5s"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "[bootstrap] ERROR: la API no respondio a /health" >&2
+          sudo docker compose -f docker-compose.prod.yml logs backend || true
+          exit 1
+      Tags:
+        - Key: Name
+          Value: mathmindia-ec2
+
+  ElasticIpAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt ElasticIp.AllocationId
+      InstanceId: !Ref Ec2Instance
+
+Outputs:
+  PublicIp:
+    Description: IP pública (Elastic IP) de la API MathMind AI
+    Value: !Ref ElasticIp
+  ApiUrl:
+    Description: URL base de la API (http por MVP; en produccion real iria tras HTTPS/ALB)
+    Value: !Sub http://${ElasticIp}:3000
+  HealthCheck:
+    Description: Health check de la API
+    Value: !Sub http://${ElasticIp}:3000/health
+  SshCommand:
+    Description: Conexion SSH a la instancia
+    Value: !Sub ssh -i tu.pem ec2-user@${ElasticIp}
+  LogPath:
+    Description: Log del bootstrap en la instancia
+    Value: /var/log/mathmindia-bootstrap.log
