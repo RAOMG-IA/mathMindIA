@@ -1,0 +1,100 @@
+# Bootstrap UNICO (no se despliega en cada push): crea el proveedor OIDC de GitHub Actions
+# y el rol IAM que el job `deploy` del workflow (ADR-018, .github/workflows/e2e.yml) asume
+# via aws-actions/configure-aws-credentials, sin claves de acceso de larga duracion en
+# GitHub. Se aplica UNA sola vez, a mano, por quien administre la cuenta AWS, antes de que
+# el job `deploy` se active en `main` — no lo dispara CI.
+#
+# Requisito previo: la pila deploy/aws/cloudformation.yml ya creada (necesitamos el ARN de
+# la instancia EC2 para acotar el permiso de SSM al recurso exacto).
+#
+# Despliegue CLI:
+#   aws cloudformation create-stack \
+#     --stack-name mathmindia-github-oidc \
+#     --template-body file://deploy/aws/github-oidc-role.yml \
+#     --parameters ParameterKey=Ec2InstanceArn,ParameterValue=arn:aws:ec2:REGION:ACCOUNT_ID:instance/i-XXXXXXXX \
+#     --capabilities CAPABILITY_NAMED_IAM
+#
+# El Output RoleArn se guarda como variable de repo GitHub (Settings > Secrets and
+# variables > Actions > Variables): AWS_DEPLOY_ROLE_ARN. No es secreta -- un ARN de rol no
+# concede nada por si solo; el control de acceso real es la condicion `sub` del trust
+# policy de abajo (solo pushes a AllowedRef del repo GitHubOrgRepo pueden asumirlo).
+#
+# Si la cuenta AWS ya tiene el proveedor OIDC de GitHub creado (p. ej. de otro proyecto),
+# borra el recurso GitHubOidcProvider de esta plantilla y sustituye su referencia en
+# GitHubDeployRole por el ARN del proveedor existente -- solo puede existir un proveedor
+# OIDC por URL en la cuenta.
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: OIDC provider + rol IAM para que GitHub Actions despliegue MathMind AI por SSM (sin claves estaticas, ADR-018)
+
+Parameters:
+  GitHubOrgRepo:
+    Type: String
+    Default: RAOMG-IA/mathMindIA
+    Description: "org/repo de GitHub autorizado a asumir el rol (formato owner/repo)"
+  AllowedRef:
+    Type: String
+    Default: refs/heads/main
+    Description: Referencia autorizada a desplegar -- acota el claim 'sub' del token OIDC al push a esta rama
+  Ec2InstanceArn:
+    Type: String
+    Description: "ARN de la instancia EC2 objetivo (arn:aws:ec2:REGION:ACCOUNT_ID:instance/i-xxxx), Output InstanceId de deploy/aws/cloudformation.yml"
+    AllowedPattern: '^arn:aws:ec2:[a-z0-9-]+:\d{12}:instance/i-[a-f0-9]+$'
+
+Resources:
+  # Un unico proveedor OIDC por URL por cuenta AWS (ver nota arriba si ya existe).
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      # Thumbprints publicos y documentados por GitHub/AWS para este proveedor; AWS valida
+      # la cadena de certificados via TLS ademas de este campo.
+      ThumbprintList:
+        - 6938fd4d98bab03faadb97b34396831e3780aea
+        - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
+
+  GitHubDeployRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: mathmindia-github-deploy
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Federated: !Ref GitHubOidcProvider
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+              StringLike:
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrgRepo}:ref:${AllowedRef}"
+      Policies:
+        - PolicyName: mathmindia-deploy-ssm
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: SendDeployCommand
+                Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Ref Ec2InstanceArn
+                  - !Sub arn:aws:ssm:${AWS::Region}::document/AWS-RunShellScript
+              - Sid: ReadCommandResult
+                Effect: Allow
+                # GetCommandInvocation/ListCommandInvocations no soportan resource-level
+                # scoping a una instancia concreta (limitacion de la API de SSM) -- el
+                # permiso de escritura (SendCommand) si esta acotado arriba a la instancia
+                # exacta, que es el control que realmente importa.
+                Action:
+                  - ssm:GetCommandInvocation
+                  - ssm:ListCommandInvocations
+                  - ssm:DescribeInstanceInformation
+                Resource: "*"
+
+Outputs:
+  RoleArn:
+    Description: "ARN a guardar como variable de repo GitHub: AWS_DEPLOY_ROLE_ARN"
+    Value: !GetAtt GitHubDeployRole.Arn

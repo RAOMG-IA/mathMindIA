@@ -10,7 +10,9 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests --exclude 'e2e/**'",
+    "test:e2e": "playwright test",
+    "e2e:serve": "node e2e/serve.mjs"
   },
   "dependencies": {
     "@mathmind/shared-types": "*",
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@mathmind/shared-testing": "*",
+    "@playwright/test": "^1.62.1",
     "@types/react": "^19.2.0",
     "typescript": "~6.0.3",
     "vitest": "^2.1.0"

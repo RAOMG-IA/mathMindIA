@@ -40,8 +40,8 @@ Parameters:
     Description: URL git del monorepo a desplegar.
   GitRef:
     Type: String
-    Default: master
-    Description: Rama/tag a desplegar.
+    Default: main
+    Description: Rama/tag a desplegar (coincide con la rama por defecto del repo y con el trigger del job `deploy` de ADR-018).
   GitHubToken:
     Type: String
     NoEcho: true
@@ -137,6 +137,29 @@ Resources:
       Domain: vpc
       Tags: [{ Key: Name, Value: mathmindia-eip }]
 
+  # Permite al job `deploy` de GitHub Actions (ADR-018) actualizar la instancia via
+  # SSM Run Command (git pull + docker compose up) sin SSH ni claves en el runner.
+  # El SSM Agent ya viene preinstalado en Amazon Linux 2023; con este perfil se registra
+  # solo (no requiere abrir ningun puerto adicional en el SecurityGroup).
+  Ec2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: mathmindia-ec2-ssm-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ec2.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags: [{ Key: Name, Value: mathmindia-ec2-role }]
+
+  Ec2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref Ec2InstanceRole]
+
   # AMI resuelto en tiempo de despliegue desde el parámetro SSM (ver Parameters.AmiId).
   Ec2Instance:
     Type: AWS::EC2::Instance
@@ -146,6 +169,7 @@ Resources:
       KeyName: !Ref KeyName
       SubnetId: !Ref PublicSubnet
       SecurityGroupIds: [!Ref SecurityGroup]
+      IamInstanceProfile: !Ref Ec2InstanceProfile
       # 30GB gp3 = límite free tier de EBS.
       BlockDeviceMappings:
         - DeviceName: /dev/xvda
@@ -221,8 +245,11 @@ Resources:
       InstanceId: !Ref Ec2Instance
 
 Outputs:
+  InstanceId:
+    Description: ID de la instancia EC2 (guardar como variable de repo GitHub AWS_EC2_INSTANCE_ID para el job `deploy`, ADR-018)
+    Value: !Ref Ec2Instance
   PublicIp:
-    Description: IP pública (Elastic IP) de la API MathMind AI
+    Description: IP pública (Elastic IP) de la API MathMind AI (guardar como variable de repo GitHub AWS_ELASTIC_IP)
     Value: !Ref ElasticIp
   ApiUrl:
     Description: URL base de la API (http por MVP; en produccion real iria tras HTTPS/ALB)

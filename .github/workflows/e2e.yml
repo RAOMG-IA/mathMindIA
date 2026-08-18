@@ -1,0 +1,163 @@
+name: CI / CD
+
+# Pipeline de CI/CD de MathMind AI (ADR-018). Valida calidad (unit/lint/typecheck) y E2E web +
+# mobile con Playwright contra el backend real + PostgreSQL, generando capturas de pantalla como
+# evidencia (artefactos); tras un push a main con ambos jobs en verde, despliega por SSM a la
+# instancia EC2 free tier ya provisionada (deploy/aws/cloudformation.yml).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality (unit + lint + typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx turbo run typecheck lint test
+        env:
+          # Sin secretos en el repo (ADR-012); el e2e los inyecta aparte.
+          TEST_PASSWORD_PLACEHOLDER: none
+
+  e2e:
+    name: E2E Playwright (web + mobile)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        # Misma imagen canonica de desarrollo/connector (ADR-016/ADR-014, pgvector disponible).
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: mathmind
+          POSTGRES_PASSWORD: mathmind
+          POSTGRES_DB: mathmindia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mathmind -d mathmindia"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Coinciden con las credenciales del servicio postgres de arriba.
+      DATABASE_URL: postgresql://mathmind:mathmind@localhost:5432/mathmindia
+      # JWT_SECRET de desarrollo: si no existe `secrets.JWT_SECRET`, se usa un valor no
+      # productivo (mismo criterio del fallback de docker-compose, ADR-016) para que el CI no
+      # falle en repos que aún no configuran el secret. En producción NUNCA versionar valor real.
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'mathmind-ci-dev-only-secret' }}
+      CORS_ALLOWED_ORIGINS: http://localhost:8081
+      PORT: 3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Prisma generate
+        working-directory: apps/backend-api
+        # @prisma/client no se resuelve en postinstall con prisma.config.ts no estándar (ADR-016 #2).
+        run: npx prisma generate
+
+      - name: Prisma migrate deploy
+        working-directory: apps/backend-api
+        run: npx prisma migrate deploy
+
+      - name: Export Expo web build
+        working-directory: apps/mobile-app
+        env:
+          CI: '1'
+          # Prefijo que Expo inyecta en el bundle web para src/api/fetchClient.ts (ADR-015).
+          EXPO_PUBLIC_API_BASE_URL: http://localhost:3000
+        run: npx expo export --platform web --output-dir dist
+
+      - name: Install Playwright browsers
+        working-directory: apps/mobile-app
+        # Chromium basta para web + emulación mobile sobre el build web (ADR-018).
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright (web + mobile)
+        working-directory: apps/mobile-app
+        env:
+          E2E_API_BASE_URL: http://localhost:3000
+          E2E_WEB_BASE_URL: http://localhost:8081
+          CI: '1'
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/mobile-app/playwright-report/
+          retention-days: 7
+
+      - name: Upload E2E screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-screenshots
+          path: apps/mobile-app/test-results/screenshots/
+          retention-days: 7
+
+  deploy:
+    name: Deploy a AWS (EC2 free tier)
+    # Solo push a main, y solo si quality+e2e pasaron -- nunca en pull_request (ADR-018).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [quality, e2e]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write # requerido por aws-actions/configure-aws-credentials (OIDC)
+      contents: read
+    steps:
+      - name: Configurar credenciales AWS (OIDC, sin claves de larga duracion)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Desplegar via SSM (git pull + docker compose up -d --build)
+        env:
+          INSTANCE_ID: ${{ vars.AWS_EC2_INSTANCE_ID }}
+        run: |
+          set -euo pipefail
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "mathmindia CD ${{ github.sha }}" \
+            --parameters commands='[
+              "set -euo pipefail",
+              "cd /opt/mathmindia",
+              "git fetch --all",
+              "git reset --hard origin/main",
+              "docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build",
+              "for i in $(seq 1 30); do curl -fsS http://localhost:3000/health >/dev/null 2>&1 && exit 0; sleep 5; done",
+              "echo NO RESPONDIO A /health TRAS EL DEPLOY >&2; docker compose -f docker-compose.prod.yml logs --tail 100 backend; exit 1"
+            ]' \
+            --query "Command.CommandId" --output text)
+          echo "SSM CommandId: $COMMAND_ID"
+
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" || true
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+            --query "{Status:Status,StdOut:StandardOutputContent,StdErr:StandardErrorContent}" \
+            --output json | tee /tmp/ssm-result.json
+
+          STATUS=$(node -pe "JSON.parse(require('fs').readFileSync('/tmp/ssm-result.json')).Status")
+          [ "$STATUS" = "Success" ]
+
+      - name: Verificar health publico (Elastic IP)
+        run: curl -fsS "http://${{ vars.AWS_ELASTIC_IP }}:3000/health"

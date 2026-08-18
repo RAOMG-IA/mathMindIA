@@ -34,4 +34,10 @@ npm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+
+# Playwright / E2E (ADR-018)
+playwright-report/
+test-results/
+blob-report/
+.swc/
 .claude/settings.local.json

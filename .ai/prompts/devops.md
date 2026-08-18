@@ -45,3 +45,31 @@ estado: done
 - `hints` devuelve 403 sin `AI_API_KEY`/`AI_BASE_URL` (esperado, documentado en main.ts).
 
 **Pendiente:** registro de `rag_ingestion_records` con `chunk_count=1` para la demo; re-ingest planificado si se destruye la DB (el fichero queda en `rag/history/`).
+
+---
+task_id: STATUS-053
+date: 2026-08-11
+agentes: [devops, director]
+flujo: [director, architecture, devops]
+artefactos: [.github/workflows/e2e.yml, apps/mobile-app/playwright.config.ts, apps/mobile-app/e2e/serve.mjs, apps/mobile-app/e2e/app.spec.ts, apps/mobile-app/package.json, .gitignore, docs/ADR/ADR-018_ci_cd_playwright_e2e.md]
+tests: [npx playwright test (web+mobile), vitest run --exclude 'e2e/**']
+estado: done
+---
+
+## 2026-08-11 — CI/CD E2E Playwright (web + mobile), implementacion de ADR-018
+
+**Contexto:** El subagente DevOps despachado desde director devolvió resultado vacío y no creó nada; la implementación la completó el rol DevOps inyectado desde el Director (mismo responsable RACI, evitando entregar vacío). Stack: monorepo npm workspaces + Turborepo; `mobile-app` es Expo + react-native-web (una base → web y móvil, ADR-015); `backend-api` Express+Prisma 7 sobre Postgres pgvector (ADR-016/ADR-014), `prisma.config.ts` no estándar.
+
+**Decisión / Realizado:**
+- `.github/workflows/e2e.yml`: jobs `quality` (turbocli typecheck+lint+test) y `e2e` (servicio postgres `pgvector:pg16` + `prisma generate` + `prisma migrate deploy` + `expo export --platform web` + `playwright install --with-deps chromium` + `npx playwright test` + upload artifacts de report y screenshots). `JWT_SECRET` como `${{ secrets.JWT_SECRET || 'mathmind-ci-dev-only-secret' }}` (sin valor real versionado, ADR-012; fallback no productivo mismo criterio del compose de ADR-016). 2 capturas: playwright-report/ y test-results/screenshots/.
+- `apps/mobile-app/playwright.config.ts`: projects `web` (Desktop Chrome) y `mobile` (Pixel 7, emulación del build web — no binario nativo, ADR-018). `webServer` doble: build web estático (8081) + backend real (3000, health).
+- `apps/mobile-app/e2e/serve.mjs`: servidor estático mínimo (node http) sin dependencia nueva para servir `./dist`.
+- `apps/mobile-app/e2e/app.spec.ts`: UI (login→home, register) con capturas por project; contrato API (register→login→temas→sessions→answers→statistics→end + 401 sin token) con `request` fixture, solo en `web`. Selectores por `getByLabel` (accessibilityLabel real) / `getByRole`.
+- `apps/mobile-app/package.json`: `@playwright/test` (devDep), scripts `test:e2e`/`e2e:serve`; `test` ahora excluye `e2e/**` (sin esto vitest recogería app.spec.ts).
+- `.gitignore`: playwright-report/, test-results/, blob-report/. ADR-018 creado por el Director.
+
+**Verificado:** 8 tests enumerados (web+mobile) con `playwright test --list` (config+specs cargan). `vitest run --exclude 'e2e/**'` → 46/46 en `mobile-app` (e2e correctamente fuera del runner unitario). `tsc --noEmit` de `mobile-app` en verde. Bug ESM resuelto de paso: `import.meta` + paquete no-ESM → `process.cwd()` en el spec.
+
+**Limitación del entorno (no verificable aquí):** el `ai-engine` typecheck falla por `node_modules` parcial (faltan `@langchain/openai`, `@langchain/textsplitters`, `eslint` — declarados pero no instalados en este árbol de trabajo); no está causado por este cambio (no toca ai-engine). La ejecución real de los e2e (browsers + backend + Postgres) y el workflow completo requieren el runner de GitHub Actions; localmente se valida carga/typecheck/tests unitarios.
+
+**Pendiente (fuera de alcance ADR-018):** binario nativo Android/iOS (Appium/Detox), cobertura real `@vitest/coverage-v8`, visual regression goldens (`toHaveScreenshot`) — dependen de baseline y de e2e real en CI.
