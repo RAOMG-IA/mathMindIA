@@ -30,8 +30,6 @@ export function AppHeader() {
         <TouchableOpacity
           style={styles.navButton}
           accessibilityRole="button"
-          // (app)/home todavia no existe (siguiente pantalla pendiente, ADR-015).
-          // @ts-expect-error -- ruta real pendiente de construir
           onPress={() => router.push('/(app)/home')}
         >
           <Text style={styles.navButtonText}>Inicio</Text>

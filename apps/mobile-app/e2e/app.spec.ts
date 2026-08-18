@@ -59,8 +59,12 @@ test.describe('UI (web + mobile)', () => {
 
 test.describe('Contrato API (backend real)', () => {
   // El flujo de contrato no depende del viewport: correrlo tambien en `mobile` seria trabajo
-  // duplicado en CI. Solo en `web`.
-  test.skip((_fixtures, testInfo) => testInfo.project.name === 'mobile', 'contrato API solo en project web')
+  // duplicado en CI. Solo en `web`. test.skip(callback, description) a nivel de describe solo
+  // recibe fixtures (ConditionBody<TestArgs>, sin testInfo) -- test.skip(condition, description)
+  // dentro de un beforeEach si recibe (fixtures, testInfo).
+  test.beforeEach((_fixtures, testInfo) => {
+    test.skip(testInfo.project.name === 'mobile', 'contrato API solo en project web')
+  })
 
   test('flujo register -> login -> temas -> session -> answer -> statistics -> end', async ({ request }) => {
     const email = uniqueEmail()

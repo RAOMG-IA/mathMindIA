@@ -158,9 +158,6 @@ export function SessionScreen({ sessionId }: SessionScreenProps) {
   // arquitectura aceptado, ver STATUS.md), asi que se redirige a Home en vez de una pantalla rota.
   useEffect(() => {
     if (storeSessionId !== null && storeSessionId !== sessionId) {
-      // Tipos de rutas desactualizados en este entorno, no la ruta en si -- ver comentario en
-      // HomeScreen.tsx.
-      // @ts-expect-error -- tipos de rutas desactualizados
       router.replace('/(app)/home')
     }
   }, [storeSessionId, sessionId, router])
@@ -225,8 +222,6 @@ export function SessionScreen({ sessionId }: SessionScreenProps) {
         onSuccess: (data) => {
           queryClient.setQueryData(queryKeys.sessionSummary(sessionId), data)
           clear()
-          // Tipos de rutas desactualizados en este entorno -- ver comentario en HomeScreen.tsx.
-          // @ts-expect-error -- tipos de rutas desactualizados, no la ruta en si (ya existe)
           router.replace(`/(app)/session/${sessionId}/summary`)
         },
       },

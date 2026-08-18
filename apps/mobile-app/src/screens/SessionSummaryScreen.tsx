@@ -27,14 +27,11 @@ export function SessionSummaryScreen({ sessionId }: SessionSummaryScreenProps) {
   // una pantalla rota).
   useEffect(() => {
     if (summaryQuery.data === undefined) {
-      // Tipos de rutas desactualizados en este entorno -- ver comentario en HomeScreen.tsx.
-      // @ts-expect-error -- tipos de rutas desactualizados
       router.replace('/(app)/home')
     }
   }, [summaryQuery.data, router])
 
   function handleGoHome() {
-    // @ts-expect-error -- tipos de rutas desactualizados
     router.replace('/(app)/home')
   }
 

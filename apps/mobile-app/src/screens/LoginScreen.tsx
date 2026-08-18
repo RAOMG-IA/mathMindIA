@@ -32,11 +32,6 @@ export function LoginScreen() {
       { email, password },
       {
         onSuccess: () => {
-          // (app)/home todavia no existe (pendiente ADR-015). Expo Router (typedRoutes) no
-          // conoce la ruta hasta que el fichero exista -- @ts-expect-error en vez de `as any`
-          // para que TS avise (directiva "no usada") en cuanto se cree esa pantalla y haya que
-          // quitar esta silenciacion.
-          // @ts-expect-error -- ruta real pendiente de construir, ver comentario arriba
           router.replace('/(app)/home')
         },
       },

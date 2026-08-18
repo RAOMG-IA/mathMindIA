@@ -46,8 +46,6 @@ export function RegisterScreen() {
       { email, password, academicLevel },
       {
         onSuccess: () => {
-          // (app)/home todavia no existe (pendiente ADR-015) -- mismo criterio que LoginScreen.
-          // @ts-expect-error -- ruta real pendiente de construir
           router.replace('/(app)/home')
         },
       },

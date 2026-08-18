@@ -20,7 +20,5 @@ export default function IndexRoute() {
     return <Redirect href="/(auth)/login" />
   }
 
-  // (app)/home todavia no existe (siguiente pantalla pendiente, ADR-015).
-  // @ts-expect-error -- ruta real pendiente de construir
   return <Redirect href="/(app)/home" />
 }

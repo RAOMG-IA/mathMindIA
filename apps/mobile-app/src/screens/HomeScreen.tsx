@@ -65,10 +65,6 @@ export function HomeScreen() {
           // Zustand (ADR-015: el cronometro del ejercicio en curso ya vivia alli), para que
           // SessionScreen lo consuma sin depender de la respuesta de esta mutation.
           startTrainingSession({ sessionId: data.session.id, mode: data.session.mode, exercise: data.exercise })
-          // La ruta ya existe de verdad (app/(app)/session/[sessionId].tsx) pero los tipos
-          // generados de Expo Router siguen desactualizados en este entorno (expo start bloqueado
-          // por el EACCES de Windows documentado en memoria -- expo export no los regenera).
-          // @ts-expect-error -- tipos de rutas desactualizados, no la ruta en si
           router.push(`/(app)/session/${data.session.id}`)
         },
       },
