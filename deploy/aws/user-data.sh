@@ -1,5 +1,5 @@
 #!/bin/bash
-# Bootstrap de MathMind AI en EC2 (AWS Free Tier, t2.micro). Ejecutado por
+# Bootstrap de MathMind AI en EC2 (AWS Free Tier, t3.micro). Ejecutado por
 # CloudFormation como UserData en el primer arranque. Ver docs/DEPLOY_AWS_FREE_TIER.md.
 # Seguridad: no escribe secretos en el log; usa variables que inyecta la plantilla.
 set -euo pipefail

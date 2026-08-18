@@ -37,6 +37,7 @@ Parameters:
     Default: refs/heads/main
     Description: Referencia autorizada a desplegar -- acota el claim 'sub' del token OIDC al push a esta rama
   Ec2InstanceArn:
+    Default: arn:aws:ec2:eu-central-1:276023597631:instance/i-058cdf2caa58da2e2
     Type: String
     Description: "ARN de la instancia EC2 objetivo (arn:aws:ec2:REGION:ACCOUNT_ID:instance/i-xxxx), Output InstanceId de deploy/aws/cloudformation.yml"
     AllowedPattern: '^arn:aws:ec2:[a-z0-9-]+:\d{12}:instance/i-[a-f0-9]+$'
@@ -49,10 +50,11 @@ Resources:
       Url: https://token.actions.githubusercontent.com
       ClientIdList:
         - sts.amazonaws.com
-      # Thumbprints publicos y documentados por GitHub/AWS para este proveedor; AWS valida
-      # la cadena de certificados via TLS ademas de este campo.
+      # Thumbprint publico y documentado por GitHub/AWS para este proveedor (root CA
+      # actual). Desde 2022 AWS valida la cadena de certificados via TLS contra su propio
+      # almacen de CAs de confianza para proveedores conocidos como este -- este campo debe
+      # tener formato valido (40 hex) pero ya no es el mecanismo real de verificacion.
       ThumbprintList:
-        - 6938fd4d98bab03faadb97b34396831e3780aea
         - 1c58a3a8518e8759bf075b76b750d4f2df264fcd
 
   GitHubDeployRole:
