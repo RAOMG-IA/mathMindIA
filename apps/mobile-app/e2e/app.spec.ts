@@ -60,7 +60,7 @@ test.describe('UI (web + mobile)', () => {
 test.describe('Contrato API (backend real)', () => {
   // El flujo de contrato no depende del viewport: correrlo tambien en `mobile` seria trabajo
   // duplicado en CI. Solo en `web`.
-  test.skip(({}, testInfo) => testInfo.project.name === 'mobile', 'contrato API solo en project web')
+  test.skip((_fixtures, testInfo) => testInfo.project.name === 'mobile', 'contrato API solo en project web')
 
   test('flujo register -> login -> temas -> session -> answer -> statistics -> end', async ({ request }) => {
     const email = uniqueEmail()

@@ -28,4 +28,17 @@ export default tseslint.config(
       },
     },
   },
+  {
+    // Scripts Node.js sueltos (p.ej. el servidor estatico de e2e, ADR-018) -- a diferencia
+    // del resto del repo (.ts), no pasan por typescript-eslint, que es quien normalmente
+    // aporta los globals ambientales de @types/node al analisis de scope de no-undef.
+    files: ['**/e2e/*.mjs'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        URL: 'readonly',
+      },
+    },
+  },
 )
