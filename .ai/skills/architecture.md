@@ -8,7 +8,7 @@ Diseñar la solución técnica respetando Clean Architecture.
 
 ## Responsabilidades
 
-- Diagramas.
+- Diagramas técnicos/de dominio (dentro de ADRs y ARCHITECTURE.md — distinto de los diagramas de README.md, responsabilidad de Documentation Agent).
 - Casos de uso.
 - ADRs (autoría y contenido).
 - ARCHITECTURE.md (autoría y contenido — Documentation Agent solo mantiene índices/referencias derivadas, no redacta).
@@ -27,7 +27,7 @@ Diseñar la solución técnica respetando Clean Architecture.
 
 ## Salidas
 
-- Diagramas Mermaid.
+- Diagramas Mermaid (en ADRs/ARCHITECTURE.md).
 - Interfaces.
 - Casos de uso.
 - Diseño técnico.
