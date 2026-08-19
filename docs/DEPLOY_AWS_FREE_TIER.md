@@ -132,7 +132,7 @@ EXPO_PUBLIC_API_BASE_URL=http://<ElasticIP>:3000
 
 ### 7a. Automático (CD, ADR-018) — recomendado
 
-Cada `push` a `main` que pasa `quality`+`e2e` en el workflow `CI / CD` (`.github/workflows/e2e.yml`) despliega solo, sin SSH: el job `deploy` asume un rol AWS por OIDC (sin claves de larga duración en GitHub) y ejecuta por **SSM Run Command** el mismo `git pull` + `docker compose up -d --build` que la vía manual, terminando con un `curl /health`. Requiere el bootstrap único de la sección 7c antes de la primera vez.
+Cada `push` a `main` que pasa `quality`+`e2e` en el workflow `CI / CD` (`.github/workflows/e2e.yml`) despliega solo, sin SSH: el job `deploy` construye la imagen del backend y la publica en GHCR (`ghcr.io/raomg-ia/mathmindia-backend`) — la instancia `t3.micro` (1 GiB RAM) no da para compilar el monorepo, así que nunca lo hace ella misma — y luego asume un rol AWS por OIDC (sin claves de larga duración en GitHub) y ejecuta por **SSM Run Command** `git pull` + `docker compose pull` + `up -d`, terminando con un `curl /health`. Requiere el bootstrap único de la sección 7c antes de la primera vez, y que el paquete `mathmindia-backend` en GHCR esté en visibilidad **Public** (se crea privado la primera vez que se publica; cámbialo una sola vez en su página de settings).
 
 ### 7b. Manual (SSH) — para depurar o cuando el CD no aplica
 
@@ -142,7 +142,8 @@ El bootstrap usa `git pull` si el repo ya existe, así que en la instancia:
 ssh -i tu.pem ec2-user@<IP>
 cd /opt/mathmindia
 sudo git pull
-sudo docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+sudo docker compose --env-file .env.prod -f docker-compose.prod.yml pull
+sudo docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 ```
 
 ### 7c. Bootstrap único del CD (una sola vez, antes de activar el `deploy` en `main`)

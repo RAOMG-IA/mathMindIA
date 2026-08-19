@@ -8,8 +8,8 @@ exec > >(tee /var/log/mathmindia-bootstrap.log) 2>&1
 
 echo "[bootstrap] Inicio $(date -u)"
 
-# 1) Docker + plugin compose (Amazon Linux 2023).
-sudo dnf install -y docker
+# 1) Docker + git (AL2023 no trae ninguno de los dos por dnf con lo minimo necesario).
+sudo dnf install -y docker git
 sudo systemctl enable --now docker
 sudo usermod -aG docker ec2-user
 if ! command -v docker; then
@@ -17,6 +17,18 @@ if ! command -v docker; then
   exit 1
 fi
 docker version
+
+# AL2023 tampoco trae el plugin "docker compose" via dnf (a diferencia de
+# docker-compose-plugin en apt/Ubuntu) -- se instala el binario oficial en una ruta de
+# cli-plugins de sistema para que funcione tambien con sudo (root). No hace falta buildx:
+# la imagen se construye en GitHub Actions (ver .github/workflows/e2e.yml, job `deploy`) y
+# se publica en GHCR; esta instancia solo hace `pull` + `up -d`.
+DOCKER_CLI_PLUGINS_DIR=/usr/local/lib/docker/cli-plugins
+sudo mkdir -p "$DOCKER_CLI_PLUGINS_DIR"
+sudo curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  -o "$DOCKER_CLI_PLUGINS_DIR/docker-compose"
+sudo chmod +x "$DOCKER_CLI_PLUGINS_DIR/docker-compose"
+docker compose version
 
 # 2) Clonar el repo del monorepo. La URL la inyecta CloudFormation.
 #    Si es privado, usa un token de acceso (parámetro GitHubToken, NoEcho).
@@ -60,10 +72,11 @@ else
   echo "[bootstrap] .env.prod ya existe -> no se regenera"
 fi
 
-# 4) Build y despliegue con compose de produccion.
-echo "[bootstrap] docker compose build + up -d"
+# 4) Pull de la imagen (construida y publicada por GitHub Actions) + despliegue.
+echo "[bootstrap] docker compose pull + up -d"
 cd "$APP_DIR"
-sudo docker compose --env-file "$ENV_FILE" -f docker-compose.prod.yml up -d --build
+sudo docker compose --env-file "$ENV_FILE" -f docker-compose.prod.yml pull
+sudo docker compose --env-file "$ENV_FILE" -f docker-compose.prod.yml up -d
 
 # 5) Esperar healthcheck.
 echo "[bootstrap] Esperando /health en :3000"
