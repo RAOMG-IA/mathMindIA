@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado — catálogo de 23 Temas sembrado en `apps/backend-api/src/infrastructure/seed/temaCatalog.ts` y servido en producción vía `GET /temas` (`TemaRepository.findAll()`), consumido por `mobile-app` (`useTemas()`).
 
 ## Contexto
 

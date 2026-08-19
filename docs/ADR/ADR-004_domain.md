@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado — implementado en `packages/shared-domain/src` (entidades `User`/`Exercise`/`Session`/`Answer`/`Hint`, Value Objects `AcademicLevel`/`Difficulty`/`Score`/`Timer`/`ExerciseType`, `ExerciseRepository.findByDifficultyBand` en vez de una entidad `ExercisePool`, tal como se decidió aquí). `Achievement` sigue sin materializar en código — consistente con estar marcado "(futuro)" en ADR-000, no bloquea esta aceptación.
 
 ## Contexto
 

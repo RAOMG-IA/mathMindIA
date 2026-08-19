@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptado — E2E Playwright implementado y en verde (STATUS-053, 2026-08-11). El despliegue continuo a AWS (esta revisión, 2026-08-15) está codificado en IaC/workflow pero requiere el bootstrap único de OIDC descrito en la Decisión §9.5 antes de que el job `deploy` pueda ejecutarse con éxito en `main`.
+Aceptado — E2E Playwright implementado y en verde (STATUS-053, 2026-08-11). El despliegue continuo a AWS: el bootstrap de OIDC (§9.5) **ya está aplicado** (rol IAM + variables de repo configuradas) — corrección 2026-08-19: la revisión anterior de este ADR decía erróneamente que el bootstrap seguía pendiente; en realidad el primer run con `quality`+`e2e` en verde (run #14) ya ejecutó el job `deploy` de verdad (no `skipped`) y llegó hasta el paso de credenciales AWS, donde falló por un desajuste real del trust policy (ver adenda 2026-08-19 abajo), no por falta de bootstrap. La plantilla ya está corregida (commit `bca407a`), pero **ese cambio no se autoaplica**: falta confirmar que alguien con acceso a la cuenta AWS haya actualizado el rol ya desplegado (`aws cloudformation update-stack` o `aws iam update-assume-role-policy` sobre `mathmindia-github-deploy`) y que un run de `main` complete `deploy` en verde de principio a fin.
 
 ## Contexto
 
@@ -91,3 +91,13 @@ Un pipeline **GitHub Actions** que construye el build web de `mobile-app`, levan
 Handoff: `.ai/prompts/director.md` (STATUS-053). Implementación E2E (§1-8): DevOps Agent (ADR-002 RACI: Docker/CI/CD). Registrado en `.ai/prompts/director.md` y `.ai/prompts/devops.md`.
 
 Revisión de despliegue continuo (§9, 2026-08-15): solicitada directamente por el usuario ("mejorar el ADR-018 e integrar la pila generada para el despliegue en AWS"), fuera del flujo Director/DevOps de agentes de este repo — decisiones de alcance (rescribir ADR-018 en vez de un ADR nuevo; trigger automático en `main`; autenticación OIDC) confirmadas explícitamente por el usuario antes de implementar. Pendiente registrar como entrada de trazabilidad en `docs/STATUS.md` (bloqueado por un conflicto de merge sin resolver en ese fichero al momento de esta revisión, ajeno a este cambio).
+
+## Adenda 2026-08-19: trust policy OIDC condicionaba por `ref`, el job usa `environment`
+
+**Contexto**: al revisar el historial real de GitHub Actions (no solo el texto de este ADR) se encontró que el run #14 fue el primero con `quality` y `e2e` en verde a la vez, y `deploy` sí llegó a ejecutarse (no `skipped`) — prueba de que el bootstrap de §9.5 (rol IAM + variables de repo) estaba correctamente aplicado, contra lo que decía la revisión anterior de este ADR. El job falló en el paso "Configurar credenciales AWS" con `Not authorized to perform sts:AssumeRoleWithWebIdentity`.
+
+**Causa real**: `deploy/aws/github-oidc-role.yml` condicionaba el trust policy del rol por el claim `sub` en formato `repo:<org>/<repo>:ref:refs/heads/<branch>` (parámetro `AllowedRef`). Pero el job `deploy` de `.github/workflows/e2e.yml` declara `environment: production` — y un job de GitHub Actions con `environment:` cambia el formato real del claim `sub` del token OIDC a `repo:<org>/<repo>:environment:<nombre>`. La condición nunca coincidía, así que `AssumeRoleWithWebIdentity` fallaba siempre (no de forma intermitente), desde el primer día en que el job empezó a usar Environments.
+
+**Fix**: `AllowedRef` sustituido por `AllowedEnvironment` (default `production`, igual que el job); la condición `StringLike` del trust policy pasa a comprobar `repo:${GitHubOrgRepo}:environment:${AllowedEnvironment}` (commit `bca407a`).
+
+**Importante — este cambio de plantilla no se autoaplica**: es IaC declarativa; el rol ya desplegado en la cuenta AWS sigue con la condición vieja hasta que alguien con acceso ejecute `aws cloudformation update-stack` (si se usó el stack de `github-oidc-role.yml`) o `aws iam update-assume-role-policy` directo sobre `mathmindia-github-deploy`. Hasta que eso ocurra, `deploy` seguirá fallando en el mismo paso con el mismo error, aunque el código ya esté corregido. Pendiente confirmar un run de `main` con `deploy` completo en verde (incluye el health check público de la Elastic IP).

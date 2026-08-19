@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado — implementado tal como se decidió: `RagIngestionRecord`/`RagChunk` (`vector(384)` via `Unsupported`) en `database/schema.prisma`, `PostgresKnowledgeBaseIndex`/`XenovaEmbedder` en `apps/backend-api/src/infrastructure`, UC-011 disparado por `npm run ingest:rag`, y `context?: readonly string[]` ya wireado en `GenerateExercise`/`GenerateHint` (`apps/ai-engine/src/prompts`). Sigue sin mitigación de prompt injection para contenido RAG (señalado explícitamente a Security, no resuelto aquí) y sin reintento de ficheros en `Error` — ambos ya fuera de alcance declarado de este ADR, no bloquean la aceptación.
 
 ## Contexto
 

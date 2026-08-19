@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado — las 4 secciones aplicables ya están implementadas: secretos solo en `.env`/variables de entorno (`.gitignore`), roles system/user separados + validación Zod de salida del LLM en UC-001/UC-003, `User` limitado a email+nivel académico, contraseñas con bcrypt (`BcryptPasswordHasher`) y errores de login genéricos. Lo marcado "Diferido" (Vault, MFA/OAuth, consentimiento parental, RBAC) sigue diferido a propósito, no bloquea la aceptación.
 
 ## Contexto
 

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado — las 7 pantallas mapeadas a User Stories están construidas y en el árbol de `apps/mobile-app/app`: `(auth)/login` (US-002), `(auth)/register` (US-001), `(app)/home` (US-003), `(app)/session/[sessionId]` (US-004/US-005/US-006-acción), `(app)/session/[sessionId]/summary` (US-006-resultado) y `(app)/statistics` (US-007). Onboarding, recuperación de contraseña y edición de perfil siguen fuera de alcance a propósito (sin User Story que los respalde), tal como fija este ADR.
 
 ## Contexto
 

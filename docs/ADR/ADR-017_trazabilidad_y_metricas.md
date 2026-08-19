@@ -1,6 +1,6 @@
 # ADR-017: Trazabilidad estructurada y métricas del sistema de agentes
 
-- **Estado:** Propuesto
+- **Estado:** Aceptado — migración retroactiva completa (86/86 entradas de `.ai/prompts/*.md` con front-matter, 0 sin migrar) y `npm run metrics -- --report` (`scripts/metrics/trazabilidad.ts`) genera los KPIs definidos en `docs/metrics/trazabilidad.md`.
 - **Fecha:** 2026-08-10
 - **Ámbito:** Gobierno del sistema multiagente (`.ai/AGENTS.md`), trazabilidad (`.ai/prompts/*.md`), `docs/STATUS.md`
 - **Decisión:** Convertir la trazabilidad de prosa a datos: cada entrada de `.ai/prompts/*.md` pasa a llevar **front-matter YAML** con los campos `task_id`, `handoff_ref`, `agentes`, `flujo`, `artefactos`, `tests`, `estado` (y `rework_de` condicional), manteniendo el relato en prosa como cuerpo. Con esa estructura un script computa los KPIs que las skills definen pero nunca miden (ADR-002/AGENTS.md): % handoff completo, % con Reviewer/Security, tasa de retrabajo, cobertura de tests (declarada y real a futuro), huecos de trazabilidad. **Adenda 2026-08-10 (fusión de diseños)**: el usuario confirmó vía AskUserQuestion dos ajustes sobre el diseño original — (1) la migración es **retroactiva** (toda la historia, no solo entradas nuevas) para tener baseline de KPIs desde el día 1, y (2) la cobertura se mide en dos capas: **declarada** (contadores por entrada) ahora y **real de código** (`@vitest/coverage-v8`) como target futuro no bloqueante. Ambas están incorporadas en §3/§5/§6.

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesto
+Aceptado — implementado en `database/schema.prisma` tal como se decidió aquí: UUID en todas las PK, `@@index([academicLevel, topic, difficultyValue])` en `exercises`, `answers.user_id` desnormalizado, enums nativos (`AcademicLevel`/`ExerciseType`/`GeneratedBy`) y migraciones reales en `database/migrations`.
 
 ## Contexto
 
