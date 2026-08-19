@@ -17,9 +17,11 @@
 # El Output RoleArn se guarda como variable de repo GitHub (Settings > Secrets and
 # variables > Actions > Variables): AWS_DEPLOY_ROLE_ARN. No es secreta -- un ARN de rol no
 # concede nada por si solo; el control de acceso real es la condicion `sub` del trust
-# policy de abajo (solo el job `deploy` del repo GitHubOrgRepo, que corre bajo el Environment
-# AllowedEnvironment, puede asumirlo -- un job con `environment:` en GitHub Actions cambia el
-# formato del claim 'sub' de ref:refs/heads/<branch> a environment:<nombre>, ver nota abajo).
+# policy de abajo (solo el job `deploy` del repo GitHubOrg@GitHubOrgId/GitHubRepo@GitHubRepoId,
+# que corre bajo el Environment AllowedEnvironment, puede asumirlo -- un job con `environment:`
+# en GitHub Actions cambia el formato del claim 'sub' de ref:refs/heads/<branch> a
+# environment:<nombre>, y ademas GitHub incluye los IDs numericos inmutables de org/repo en el
+# sub, ver nota abajo).
 #
 # Si la cuenta AWS ya tiene el proveedor OIDC de GitHub creado (p. ej. de otro proyecto),
 # borra el recurso GitHubOidcProvider de esta plantilla y sustituye su referencia en
@@ -30,22 +32,42 @@ AWSTemplateFormatVersion: "2010-09-09"
 Description: OIDC provider + rol IAM para que GitHub Actions despliegue MathMind AI por SSM (sin claves estaticas, ADR-018)
 
 Parameters:
-  GitHubOrgRepo:
+  GitHubOrgId:
     Type: String
-    Default: RAOMG-IA/mathMindIA
-    Description: "org/repo de GitHub autorizado a asumir el rol (formato owner/repo)"
+    Default: "290325480"
+    Description: >-
+      ID numerico inmutable de la organizacion GitHub (RAOMG-IA). GitHub incluye este ID en
+      el claim 'sub' del token OIDC (repo:org@ID/repo@ID:...) como proteccion contra reclamar
+      el rol tras renombrar/eliminar y recrear un repo -- verificado inspeccionando el token
+      real en un run fallido (ver step debug temporal en e2e.yml, retirado tras este fix).
+      Obtenerlo con: curl -s https://api.github.com/orgs/RAOMG-IA | jq .id
+  GitHubOrg:
+    Type: String
+    Default: RAOMG-IA
+    Description: "Organizacion de GitHub autorizada a asumir el rol"
+  GitHubRepoId:
+    Type: String
+    Default: "1325331750"
+    Description: >-
+      ID numerico inmutable del repo (mathMindIA), mismo motivo que GitHubOrgId. Obtenerlo
+      con: curl -s https://api.github.com/repos/RAOMG-IA/mathMindIA | jq .id
+  GitHubRepo:
+    Type: String
+    Default: mathMindIA
+    Description: "Nombre del repo de GitHub autorizado a asumir el rol"
   AllowedEnvironment:
     Type: String
     Default: production
     Description: >-
       Nombre del Environment de GitHub del job `deploy` (ver .github/workflows/e2e.yml,
-      `environment: production`) -- acota el claim 'sub' del token OIDC. Un job con
-      `environment:` cambia el formato del claim 'sub' de
-      repo:<org>/<repo>:ref:refs/heads/<branch> a repo:<org>/<repo>:environment:<nombre>;
-      condicionar por ref (como hacia esta plantilla antes) nunca matcheaba y
+      `environment: production`) -- acota el claim 'sub' del token OIDC junto con
+      GitHubOrgId/GitHubRepoId. Un job con `environment:` cambia el formato del claim 'sub' de
+      repo:<org>@<id>/<repo>@<id>:ref:refs/heads/<branch> a
+      repo:<org>@<id>/<repo>@<id>:environment:<nombre>; condicionar solo por ref o por
+      org/repo sin ID (como hacia esta plantilla antes) nunca matcheaba y
       AssumeRoleWithWebIdentity fallaba siempre con "Not authorized".
   Ec2InstanceArn:
-    Default: arn:aws:ec2:eu-central-1:276023597631:instance/i-058cdf2caa58da2e2
+    Default: arn:aws:ec2:eu-central-1:276023597631:instance/i-01a6ea56750cd5586
     Type: String
     Description: "ARN de la instancia EC2 objetivo (arn:aws:ec2:REGION:ACCOUNT_ID:instance/i-xxxx), Output InstanceId de deploy/aws/cloudformation.yml"
     AllowedPattern: '^arn:aws:ec2:[a-z0-9-]+:\d{12}:instance/i-[a-f0-9]+$'
@@ -80,7 +102,7 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrgRepo}:environment:${AllowedEnvironment}"
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrg}@${GitHubOrgId}/${GitHubRepo}@${GitHubRepoId}:environment:${AllowedEnvironment}"
       Policies:
         - PolicyName: mathmindia-deploy-ssm
           PolicyDocument:

@@ -92,17 +92,29 @@ jobs:
           # Prefijo que Expo inyecta en el bundle web para src/api/fetchClient.ts (ADR-015).
           EXPO_PUBLIC_API_BASE_URL: http://localhost:3000
         run: npx expo export --platform web --output-dir dist
-      - name: Measure Playwright CDN speed
+
+      - name: Resolver version de Playwright
+        id: playwright-version
         working-directory: apps/mobile-app
-        run: | 
-          echo "Testing Playwright CDN speed (bytes/sec):"
-          # descarga a /dev/null y muestra la velocidad promedio
-          curl -s -w "%{speed_download}\n" -o /dev/null https://cdn.playwright.dev/builds/cft/151.0.7922.34/linux64/chrome-linux64.zip
-        
-      - name: Install Playwright browsers
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache de navegadores Playwright
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright browsers (Chromium)
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         working-directory: apps/mobile-app
         # Chromium basta para web + emulación mobile sobre el build web (ADR-018).
         run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright OS deps (cache hit -- binario ya en cache, faltan libs del sistema)
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        working-directory: apps/mobile-app
+        run: npx playwright install-deps chromium
 
       - name: Run Playwright (web + mobile)
         working-directory: apps/mobile-app
