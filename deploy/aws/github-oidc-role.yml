@@ -67,7 +67,7 @@ Parameters:
       org/repo sin ID (como hacia esta plantilla antes) nunca matcheaba y
       AssumeRoleWithWebIdentity fallaba siempre con "Not authorized".
   Ec2InstanceArn:
-    Default: arn:aws:ec2:eu-central-1:276023597631:instance/i-01a6ea56750cd5586
+    Default: arn:aws:ec2:eu-central-1:276023597631:instance/i-0045bab249ce65a15
     Type: String
     Description: "ARN de la instancia EC2 objetivo (arn:aws:ec2:REGION:ACCOUNT_ID:instance/i-xxxx), Output InstanceId de deploy/aws/cloudformation.yml"
     AllowedPattern: '^arn:aws:ec2:[a-z0-9-]+:\d{12}:instance/i-[a-f0-9]+$'

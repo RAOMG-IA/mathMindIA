@@ -1,7 +1,9 @@
 # CloudFormation: infraestructura free tier de MathMind AI (MVP de pruebas).
 # Despliega en una sola pila: VPC + subnet pública, SecurityGroup (SSH restringido,
 # puerto 3000 abierto), EC2 t3.micro (free tier 750h/mes), Elastic IP y el bootstrap
-# que instala Docker y levanta docker-compose.prod.yml (postgres + redis + backend).
+# que instala Docker y levanta docker-compose.prod.yml (postgres + redis + backend). La
+# imagen del backend se construye en GitHub Actions y se publica en GHCR -- la t3.micro
+# (1 GiB RAM) solo hace `docker compose pull` + `up -d`, nunca compila el monorepo.
 #
 # Coste: 0 $ mientras se use la free tier (t3.micro, 30GB gp3, 1 EIP asociado).
 # Ver docs/DEPLOY_AWS_FREE_TIER.md para el paso a paso en la consola.
@@ -187,6 +189,18 @@ Resources:
           sudo systemctl enable --now docker
           sudo usermod -aG docker ec2-user
           docker version
+          # AL2023 no trae el plugin "docker compose" via dnf (a diferencia del paquete
+          # docker-compose-plugin de apt en Ubuntu) -- se instala el binario oficial en una
+          # ruta de cli-plugins de sistema para que funcione tambien con sudo (root). No hace
+          # falta buildx: la imagen se construye en GitHub Actions (mucha mas RAM/CPU que esta
+          # t3.micro de 1 GiB, insuficiente para compilar el monorepo) y se publica en GHCR;
+          # aqui solo se hace `pull` + `up -d`.
+          DOCKER_CLI_PLUGINS_DIR=/usr/local/lib/docker/cli-plugins
+          sudo mkdir -p "$DOCKER_CLI_PLUGINS_DIR"
+          sudo curl -fsSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+            -o "$DOCKER_CLI_PLUGINS_DIR/docker-compose"
+          sudo chmod +x "$DOCKER_CLI_PLUGINS_DIR/docker-compose"
+          docker compose version
           APP_DIR=/opt/mathmindia
           sudo mkdir -p "$APP_DIR"
           if [ -d "$APP_DIR/.git" ]; then
@@ -221,9 +235,10 @@ Resources:
           else
             echo "[bootstrap] .env.prod ya existe -> no se regenera"
           fi
-          echo "[bootstrap] docker compose build + up -d"
+          echo "[bootstrap] docker compose pull + up -d"
           cd "$APP_DIR"
-          sudo docker compose --env-file "$ENV_FILE" -f docker-compose.prod.yml up -d --build
+          sudo docker compose --env-file "$ENV_FILE" -f docker-compose.prod.yml pull
+          sudo docker compose --env-file "$ENV_FILE" -f docker-compose.prod.yml up -d
           echo "[bootstrap] Esperando /health en :3000"
           for i in $(seq 1 60); do
             if curl -fsS http://localhost:3000/health >/dev/null 2>&1; then

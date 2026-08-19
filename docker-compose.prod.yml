@@ -41,10 +41,10 @@ services:
       - mathmindia
 
   backend:
-    build:
-      context: .
-      dockerfile: docker/node/Dockerfile.prod
-    image: mathmindia/backend:latest
+    # Imagen construida y publicada por GitHub Actions (job `deploy`, ver .github/workflows/
+    # e2e.yml) desde docker/node/Dockerfile.prod. Nunca se construye en la propia t3.micro
+    # (1 GiB RAM insuficiente para compilar el monorepo); aqui solo se hace pull.
+    image: ghcr.io/raomg-ia/mathmindia-backend:latest
     container_name: mathmindia-prod-backend
     restart: unless-stopped
     environment:

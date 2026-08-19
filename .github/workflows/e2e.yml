@@ -150,14 +150,46 @@ jobs:
     permissions:
       id-token: write # requerido por aws-actions/configure-aws-credentials (OIDC)
       contents: read
+      # Push a GHCR NO usa GITHUB_TOKEN (ver step "Login GHCR") -- la politica de Workflow
+      # permissions de la organizacion lo deja en solo lectura y no es overrideable aqui.
     steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        # GITHUB_TOKEN no sirve: la politica de Workflow permissions de la organizacion
+        # RAOMG-IA esta fijada en "Read repository contents and packages permissions" (solo
+        # lectura) y no es configurable por repo -- se usa un PAT fine-grained propio, scope
+        # unico "Packages: write", guardado como secret de repo GHCR_PUSH_TOKEN.
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+
+      - name: Construir y publicar imagen backend en GHCR
+        # La t3.micro (1 GiB RAM) no da para compilar el monorepo (npm ci + tsc via turbo
+        # tarda >10min y puede colgar la instancia por falta de memoria) -- se construye
+        # aqui, en el runner de GitHub, y el EC2 solo hace `docker compose pull`.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/node/Dockerfile.prod
+          push: true
+          tags: |
+            ghcr.io/raomg-ia/mathmindia-backend:latest
+            ghcr.io/raomg-ia/mathmindia-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Configurar credenciales AWS (OIDC, sin claves de larga duracion)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Desplegar via SSM (git pull + docker compose up -d --build)
+      - name: Desplegar via SSM (git pull + docker compose pull + up -d)
         env:
           INSTANCE_ID: ${{ vars.AWS_EC2_INSTANCE_ID }}
         run: |
@@ -171,7 +203,8 @@ jobs:
               "cd /opt/mathmindia",
               "git fetch --all",
               "git reset --hard origin/main",
-              "docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build",
+              "docker compose --env-file .env.prod -f docker-compose.prod.yml pull",
+              "docker compose --env-file .env.prod -f docker-compose.prod.yml up -d",
               "for i in $(seq 1 30); do curl -fsS http://localhost:3000/health >/dev/null 2>&1 && exit 0; sleep 5; done",
               "echo NO RESPONDIO A /health TRAS EL DEPLOY >&2; docker compose -f docker-compose.prod.yml logs --tail 100 backend; exit 1"
             ]' \
