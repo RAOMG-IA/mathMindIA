@@ -36,11 +36,11 @@ test.describe('UI (web + mobile)', () => {
     await page.goto('/login')
     await expect(page.getByText('MathMind AI')).toBeVisible()
     await expect(page.getByLabel('Email')).toBeVisible()
-    await expect(page.getByLabel('Contraseña')).toBeVisible()
+    await expect(page.getByLabel('Contraseña', { exact: true })).toBeVisible()
     await page.screenshot({ path: screenshotPath('login.png'), fullPage: true })
 
     await page.getByLabel('Email').fill(email)
-    await page.getByLabel('Contraseña').fill(PASSWORD)
+    await page.getByLabel('Contraseña', { exact: true }).fill(PASSWORD)
     await page.getByRole('button', { name: 'Entrar' }).click()
 
     // (app)/_layout.tsx redirige a /(app)/home al autenticarse (sessionRouting).
@@ -61,8 +61,11 @@ test.describe('Contrato API (backend real)', () => {
   // El flujo de contrato no depende del viewport: correrlo tambien en `mobile` seria trabajo
   // duplicado en CI. Solo en `web`. test.skip(callback, description) a nivel de describe solo
   // recibe fixtures (ConditionBody<TestArgs>, sin testInfo) -- test.skip(condition, description)
-  // dentro de un beforeEach si recibe (fixtures, testInfo).
-  test.beforeEach((_fixtures, testInfo) => {
+  // dentro de un beforeEach si recibe (fixtures, testInfo). Playwright parsea la firma del
+  // callback en tiempo estatico para resolver que fixtures inyectar -- el primer parametro debe
+  // ser un patron de destructuring de objeto (aunque vacio), no un nombre plano como `_fixtures`.
+  // eslint-disable-next-line no-empty-pattern -- Playwright exige el patron vacio, ver arriba.
+  test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.name === 'mobile', 'contrato API solo en project web')
   })
 
