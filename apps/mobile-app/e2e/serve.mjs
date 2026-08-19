@@ -4,8 +4,12 @@
 import { createServer } from 'node:http'
 import { readFile } from 'node:fs/promises'
 import { extname, join, normalize } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const ROOT = new URL('./dist/', import.meta.url)
+// Ruta nativa del SO (backslashes en Windows), no ROOT.pathname (URL, siempre con `/`) -- join()
+// y normalize() de node:path devuelven backslashes en Windows, asi que comparar contra
+// ROOT.pathname (URL) fallaba el chequeo de path traversal de abajo en todas las peticiones.
+const ROOT = fileURLToPath(new URL('../dist/', import.meta.url))
 const PORT = Number(process.env.E2E_WEB_PORT ?? 8081)
 const HOST = process.env.E2E_WEB_HOST ?? 'localhost'
 
@@ -29,19 +33,24 @@ const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     let pathname = decodeURIComponent(url.pathname)
     if (pathname.endsWith('/')) pathname += 'index.html'
-    const file = normalize(join(ROOT.pathname, pathname))
-    if (!file.startsWith(ROOT.pathname)) {
+    const file = normalize(join(ROOT, pathname))
+    if (!file.startsWith(ROOT)) {
       res.writeHead(403).end('Forbidden')
       return
     }
+    // servedFile determina el Content-Type -- en el fallback SPA es index.html, no `file`
+    // (la ruta pedida, p.ej. /register, sin extension: octet-stream forzaba una descarga en vez
+    // de renderizar el HTML).
     let data
+    let servedFile = file
     try {
       data = await readFile(file)
     } catch {
       // SPA fallback: rutas de Expo Router sin fichero -> index.html
-      data = await readFile(new URL('index.html', ROOT))
+      servedFile = join(ROOT, 'index.html')
+      data = await readFile(servedFile)
     }
-    res.writeHead(200, { 'Content-Type': MIME[extname(file)] ?? 'application/octet-stream' })
+    res.writeHead(200, { 'Content-Type': MIME[extname(servedFile)] ?? 'application/octet-stream' })
     res.end(data)
   } catch (error) {
     res.writeHead(500).end(String(error))
