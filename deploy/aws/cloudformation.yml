@@ -183,7 +183,7 @@ Resources:
           set -euo pipefail
           exec > >(tee /var/log/mathmindia-bootstrap.log) 2>&1
           echo "[bootstrap] Inicio $(date -u)"
-          sudo dnf install -y docker
+          sudo dnf install -y docker git
           sudo systemctl enable --now docker
           sudo usermod -aG docker ec2-user
           docker version
