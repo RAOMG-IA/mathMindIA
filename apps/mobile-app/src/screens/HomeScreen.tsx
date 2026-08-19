@@ -5,9 +5,7 @@ import { useStartSession, useTemas, useUserStatistics } from '../api'
 import { AcademicLevelStars, BackgroundGrid, Combobox, NeuralLoader } from '../components'
 import { useTrainingSessionStore } from '../store/useTrainingSessionStore'
 import { styles } from './HomeScreen.styles'
-import type { AcademicLevel, ExerciseType } from './HomeScreen.validation'
-import { temasForLevel, validateHomeForm } from './HomeScreen.validation'
-import type { HomeFormErrors } from './HomeScreen.validation'
+import { type AcademicLevel, type ExerciseType, type HomeFormErrors, temasForLevel, validateHomeForm } from './HomeScreen.validation'
 
 const MODES: ReadonlyArray<{ value: ExerciseType; label: string }> = [
   { value: 'Test', label: 'Modo Test' },
