@@ -24,6 +24,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+
+      - name: Prisma generate
+        working-directory: apps/backend-api
+        # @prisma/client no se resuelve en postinstall con prisma.config.ts no estandar (ADR-016 #2).
+        run: npx prisma generate
+
       - run: npx turbo run typecheck lint test
         env:
           # Sin secretos en el repo (ADR-012); el e2e los inyecta aparte.
