@@ -94,7 +94,10 @@ jobs:
         run: npx expo export --platform web --output-dir dist
       - name: Measure Playwright CDN speed
         working-directory: apps/mobile-app
-        run: | echo "Testing Playwright CDN speed (bytes/sec):"
+        run: | 
+          echo "Testing Playwright CDN speed (bytes/sec):"
+          # descarga a /dev/null y muestra la velocidad promedio
+          curl -s -w "%{speed_download}\n" -o /dev/null https://cdn.playwright.dev/builds/cft/151.0.7922.34/linux64/chrome-linux64.zip
         
       - name: Install Playwright browsers
         working-directory: apps/mobile-app
