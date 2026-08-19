@@ -11,7 +11,16 @@
       "**/*"
     ],
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.svg",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#0a0e17"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -19,7 +28,9 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {},
+    "android": {
+      "package": "com.mathmindai.app"
+    },
     "web": {
       "bundler": "metro"
     },

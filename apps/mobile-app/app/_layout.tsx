@@ -1,9 +1,16 @@
 import { useEffect, useState } from 'react'
 import { Stack } from 'expo-router'
+import * as SplashScreen from 'expo-splash-screen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { createTokenStorage } from '../src/store/createTokenStorage'
 import { useSessionStore } from '../src/store/useSessionStore'
+
+// Mantiene visible el splash nativo (app.json -- plugin expo-splash-screen) hasta que
+// hydrate() resuelva mas abajo, en vez de que el SO lo oculte antes de tiempo y deje un frame
+// en blanco antes de que NeuralLoader (app/index.tsx) tome el relevo. Ignora el error si ya
+// esta oculto (puede pasar en Fast Refresh) -- mismo criterio boilerplate de la doc de Expo.
+void SplashScreen.preventAutoHideAsync().catch(() => undefined)
 // CSS global (scrollbar formal al diseño de la app) -- solo tiene efecto en Web, ver
 // src/styles/README.md. Importado una unica vez aqui, no por pantalla.
 import '../src/styles/global.css'
@@ -24,7 +31,10 @@ export default function RootLayout() {
   // una sola vez al arrancar. Aqui y no en (app)/_layout.tsx ni en index.tsx porque ambos
   // dependen de isHydrated -- un unico punto de partida evita repetir el efecto en los dos.
   useEffect(() => {
-    void useSessionStore.getState().hydrate(createTokenStorage())
+    void useSessionStore
+      .getState()
+      .hydrate(createTokenStorage())
+      .finally(() => void SplashScreen.hideAsync())
   }, [])
 
   return (
