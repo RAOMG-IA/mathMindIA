@@ -139,6 +139,20 @@ jobs:
       id-token: write # requerido por aws-actions/configure-aws-credentials (OIDC)
       contents: read
     steps:
+      # DEBUG TEMPORAL: imprime el claim `sub` real del token OIDC para diagnosticar el
+      # fallo "Not authorized to perform sts:AssumeRoleWithWebIdentity" -- quitar este step
+      # en cuanto se confirme el formato del sub (no verifica firma, solo decodifica payload).
+      - name: Debug -- inspeccionar claims del token OIDC
+        run: |
+          set -euo pipefail
+          TOKEN=$(curl -sSL -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r '.value')
+          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2)
+          MOD=$(( ${#PAYLOAD} % 4 ))
+          if [ "$MOD" -eq 2 ]; then PAYLOAD="${PAYLOAD}=="; fi
+          if [ "$MOD" -eq 3 ]; then PAYLOAD="${PAYLOAD}="; fi
+          echo "$PAYLOAD" | base64 -d | jq '{sub, aud, environment, ref, event_name}'
+
       - name: Configurar credenciales AWS (OIDC, sin claves de larga duracion)
         uses: aws-actions/configure-aws-credentials@v4
         with:
