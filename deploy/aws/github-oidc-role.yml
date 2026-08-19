@@ -17,7 +17,9 @@
 # El Output RoleArn se guarda como variable de repo GitHub (Settings > Secrets and
 # variables > Actions > Variables): AWS_DEPLOY_ROLE_ARN. No es secreta -- un ARN de rol no
 # concede nada por si solo; el control de acceso real es la condicion `sub` del trust
-# policy de abajo (solo pushes a AllowedRef del repo GitHubOrgRepo pueden asumirlo).
+# policy de abajo (solo el job `deploy` del repo GitHubOrgRepo, que corre bajo el Environment
+# AllowedEnvironment, puede asumirlo -- un job con `environment:` en GitHub Actions cambia el
+# formato del claim 'sub' de ref:refs/heads/<branch> a environment:<nombre>, ver nota abajo).
 #
 # Si la cuenta AWS ya tiene el proveedor OIDC de GitHub creado (p. ej. de otro proyecto),
 # borra el recurso GitHubOidcProvider de esta plantilla y sustituye su referencia en
@@ -32,10 +34,16 @@ Parameters:
     Type: String
     Default: RAOMG-IA/mathMindIA
     Description: "org/repo de GitHub autorizado a asumir el rol (formato owner/repo)"
-  AllowedRef:
+  AllowedEnvironment:
     Type: String
-    Default: refs/heads/main
-    Description: Referencia autorizada a desplegar -- acota el claim 'sub' del token OIDC al push a esta rama
+    Default: production
+    Description: >-
+      Nombre del Environment de GitHub del job `deploy` (ver .github/workflows/e2e.yml,
+      `environment: production`) -- acota el claim 'sub' del token OIDC. Un job con
+      `environment:` cambia el formato del claim 'sub' de
+      repo:<org>/<repo>:ref:refs/heads/<branch> a repo:<org>/<repo>:environment:<nombre>;
+      condicionar por ref (como hacia esta plantilla antes) nunca matcheaba y
+      AssumeRoleWithWebIdentity fallaba siempre con "Not authorized".
   Ec2InstanceArn:
     Default: arn:aws:ec2:eu-central-1:276023597631:instance/i-058cdf2caa58da2e2
     Type: String
@@ -72,7 +80,7 @@ Resources:
               StringEquals:
                 token.actions.githubusercontent.com:aud: sts.amazonaws.com
               StringLike:
-                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrgRepo}:ref:${AllowedRef}"
+                token.actions.githubusercontent.com:sub: !Sub "repo:${GitHubOrgRepo}:environment:${AllowedEnvironment}"
       Policies:
         - PolicyName: mathmindia-deploy-ssm
           PolicyDocument:
