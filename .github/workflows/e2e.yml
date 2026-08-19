@@ -92,7 +92,10 @@ jobs:
           # Prefijo que Expo inyecta en el bundle web para src/api/fetchClient.ts (ADR-015).
           EXPO_PUBLIC_API_BASE_URL: http://localhost:3000
         run: npx expo export --platform web --output-dir dist
-
+      - name: Measure Playwright CDN speed
+        working-directory: apps/mobile-app
+        run: | echo "Testing Playwright CDN speed (bytes/sec):"
+        
       - name: Install Playwright browsers
         working-directory: apps/mobile-app
         # Chromium basta para web + emulación mobile sobre el build web (ADR-018).
