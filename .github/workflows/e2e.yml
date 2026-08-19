@@ -28,6 +28,11 @@ jobs:
       - name: Prisma generate
         working-directory: apps/backend-api
         # @prisma/client no se resuelve en postinstall con prisma.config.ts no estandar (ADR-016 #2).
+        # DATABASE_URL: prisma.config.ts la resuelve via env() al cargar la config -- generate no
+        # abre conexion real, pero revienta si la variable no existe. Este job no tiene el
+        # servicio postgres del job `e2e`, de ahi el placeholder.
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/mathmindia
         run: npx prisma generate
 
       - run: npx turbo run typecheck lint test

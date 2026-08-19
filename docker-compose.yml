@@ -62,6 +62,9 @@ services:
       # JWT_SECRET: placeholder SOLO para desarrollo. En cualquier entorno
       # compartido/produccion debe venir de .env real (ADR-012: secretos solo env).
       JWT_SECRET: ${JWT_SECRET:-mathmindia-dev-only-secret}
+      # Origen del build web de mobile-app servido en local (e2e:serve / expo export), ver
+      # apps/backend-api/.env.example.
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8081}
       AI_API_KEY: ${AI_API_KEY:-}
       AI_BASE_URL: ${AI_BASE_URL:-}
       AI_MODEL_NAME: ${AI_MODEL_NAME:-}
