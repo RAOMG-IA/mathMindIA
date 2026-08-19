@@ -2,6 +2,9 @@
   "expo": {
     "name": "MathMind AI",
     "slug": "mathmind-ai",
+    
+    "slug_eas_old": "mathmindia-uomv-lrdmkivadn-f0srr",
+    "owner": "ruben_zkteco",
     "scheme": "mathmindia",
     "version": "0.0.0",
     "orientation": "portrait",
@@ -17,6 +20,11 @@
     "android": {},
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c1beb3b3-d91e-4e59-b5a8-db92811388ec"
+      }
     }
   }
 }
