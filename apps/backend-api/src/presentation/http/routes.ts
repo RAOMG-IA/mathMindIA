@@ -51,6 +51,19 @@ export function createRoutes(controllers: Controllers, tokenIssuer: TokenIssuer)
     }
   })
 
+  // US-009: sin body -- todos los datos se generan en el servidor. req.ip es la IP que ve
+  // Express (el socket directo; sin `trust proxy` configurado, no refleja al cliente real si en
+  // el futuro se despliega detras de un reverse proxy/ALB -- no es el caso hoy, deploy directo a
+  // EC2, ver ADR-018). Password/username no dependen de conocer al cliente real, solo de tener
+  // algun valor -- no es un mecanismo de seguridad (ver GuestLoginUseCase).
+  router.post('/auth/guest', async (req, res) => {
+    try {
+      res.json(await controllers.auth.guestLogin(req.ip ?? '0.0.0.0'))
+    } catch (error) {
+      handleError(res, error, true)
+    }
+  })
+
   router.post('/sessions', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       res.json(await controllers.session.startSession(req.userId as string, req.body))

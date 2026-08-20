@@ -140,6 +140,21 @@ components:
         sessionToken:
           type: string
 
+    GuestLoginResponseDto:
+      type: object
+      required: [userId, sessionToken, email]
+      properties:
+        userId:
+          type: string
+        sessionToken:
+          type: string
+        email:
+          type: string
+          description: >-
+            Generado por el servidor (publico<numero>@invitado.mathmind.local) -- a diferencia
+            de RegisterResponseDto/LoginResponseDto, se incluye aqui porque el cliente no lo
+            conoce de antemano (US-009).
+
     SessionDto:
       type: object
       required: [id, mode, academicLevel, startedAt]
@@ -413,6 +428,25 @@ paths:
           description: >
             Mensaje genérico idéntico para email inexistente y contraseña incorrecta
             (LoginUseCase, no distingue la causa).
+
+  /auth/guest:
+    post:
+      tags: [Auth]
+      summary: Acceso de invitado, "Prueba sin registrarte" (US-009)
+      security: []
+      description: >-
+        Sin request body -- email/password/academicLevel se generan en el servidor
+        (GuestLoginUseCase, reutiliza RegisterUseCase). El password se deriva de la IP que ve
+        el servidor al recibir la petición, no algo que aporte el cliente.
+      responses:
+        "200":
+          description: Cuenta de invitado creada y autenticada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuestLoginResponseDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /sessions:
     post:

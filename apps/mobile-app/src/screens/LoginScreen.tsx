@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import { useLogin } from '../api'
+import { useGuestLogin, useLogin } from '../api'
 import { BackgroundGrid, EmailInput, NeuralLoader, ParticleField, PasswordInput } from '../components'
 import { styles } from './LoginScreen.styles'
 import type { LoginFormErrors } from './LoginScreen.validation'
@@ -15,6 +15,7 @@ import { validateLoginForm } from './LoginScreen.validation'
 export function LoginScreen() {
   const router = useRouter()
   const login = useLogin()
+  const guestLogin = useGuestLogin()
   const insets = useSafeAreaInsets()
 
   const [email, setEmail] = useState('')
@@ -42,7 +43,18 @@ export function LoginScreen() {
     router.push('/(auth)/register')
   }
 
-  if (login.isPending) {
+  // US-009: acceso de un clic, sin formulario -- pensado para que los tutores del TFM puedan
+  // evaluar la app sin registrarse. El servidor genera email/password/nivel (GuestLoginUseCase);
+  // este handler no manda nada, solo dispara la mutation.
+  function handleGuestLogin() {
+    guestLogin.mutate(undefined, {
+      onSuccess: () => {
+        router.replace('/(app)/home')
+      },
+    })
+  }
+
+  if (login.isPending || guestLogin.isPending) {
     return <NeuralLoader />
   }
 
@@ -77,8 +89,21 @@ export function LoginScreen() {
             </View>
           ) : null}
 
+          {guestLogin.isError ? (
+            <View style={styles.serverErrorBanner}>
+              <Text style={styles.serverErrorText}>{guestLogin.error.message}</Text>
+            </View>
+          ) : null}
+
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} accessibilityRole="button">
             <Text style={styles.submitText}>Entrar</Text>
+          </TouchableOpacity>
+
+          {/* US-009: acceso de un clic sin registro, pensado para que los tutores del TFM
+              evaluen la app sin friccion -- crea una cuenta "Publico<numero>" real en el
+              servidor (GuestLoginUseCase) y entra directamente. */}
+          <TouchableOpacity style={styles.guestButton} onPress={handleGuestLogin} accessibilityRole="button">
+            <Text style={styles.guestButtonText}>Prueba sin registrarte</Text>
           </TouchableOpacity>
 
           {/* Sin User Story que lo respalde (US-002/ADR-015 lo marcan explicitamente "fuera de

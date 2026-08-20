@@ -65,6 +65,21 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
   },
+  // US-009: boton secundario -- visible pero deliberadamente menos prominente que "Entrar"
+  // (borde en vez de relleno), es una via de acceso alternativa, no la principal.
+  guestButton: {
+    borderWidth: 1,
+    borderColor: 'rgba(76, 201, 240, 0.35)',
+    borderRadius: 40,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  guestButtonText: {
+    color: COLORS.ice,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   // Atenuado deliberadamente (opacity baja, sin subrayado) -- no es un enlace real todavia
   // (sin User Story, ver comentario en LoginScreen.tsx), no debe leerse como interactivo.
   forgotPasswordText: {

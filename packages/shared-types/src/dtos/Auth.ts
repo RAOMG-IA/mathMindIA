@@ -23,3 +23,14 @@ export interface LoginResponseDto {
   readonly userId: string
   readonly sessionToken: string
 }
+
+// US-009 Acceso de invitado ("Prueba sin registrarte"). Sin request body -- todos los datos
+// (email/password/academicLevel) se generan en el servidor, no los aporta quien pulsa el
+// boton. A diferencia de RegisterResponseDto/LoginResponseDto, incluye `email`: el cliente no
+// lo conoce de antemano (lo genera el servidor), y useSessionStore.login() lo necesita para
+// persistir la sesion (ver apps/mobile-app/src/api/hooks/useAuth.ts).
+export interface GuestLoginResponseDto {
+  readonly userId: string
+  readonly sessionToken: string
+  readonly email: string
+}

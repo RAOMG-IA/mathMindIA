@@ -4,8 +4,8 @@ import { useSessionStore } from '../store/useSessionStore'
 // el prefijo que Expo exige para inyectar variables de entorno en el bundle de cliente.
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? 'http://localhost:3000'
 
-// Unicas dos rutas del contrato que no requieren sessionToken -- ver openapi.yaml.
-const PUBLIC_PATHS = new Set(['/auth/register', '/auth/login'])
+// Unicas tres rutas del contrato que no requieren sessionToken -- ver openapi.yaml.
+const PUBLIC_PATHS = new Set(['/auth/register', '/auth/login', '/auth/guest'])
 
 interface ErrorBody {
   readonly error?: string
