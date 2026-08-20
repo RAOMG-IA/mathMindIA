@@ -1,7 +1,9 @@
 # Entorno de PRODUCCION Docker Compose de MathMind AI (MVP test AWS).
 # Ver docs/DEPLOY_AWS_FREE_TIER.md.
 # A diferencia de docker-compose.yml (desarrollo: bind mounts + tsx watch), aqui no hay
-# montajes del host: imagenes construidas + volumenes persistentes nombrados.
+# montajes de codigo del host: imagenes construidas + volumenes persistentes nombrados.
+# Excepcion: ./rag/{input,history} en el servicio `backend` (material a ingerir por
+# `npm run ingest:rag`, UC-011) -- no es codigo, es contenido que cambia sin republicar imagen.
 # En EC2 free tier (t2.micro) se despliega con `docker compose -f docker-compose.prod.yml up -d --build`.
 
 name: mathmindia-prod
@@ -58,8 +60,16 @@ services:
       AI_BASE_URL: ${AI_BASE_URL:-}
       AI_MODEL_NAME: ${AI_MODEL_NAME:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      RAG_INPUT_DIR: ${RAG_INPUT_DIR:-}
+      RAG_HISTORY_DIR: ${RAG_HISTORY_DIR:-}
     ports:
       - "0.0.0.0:3000:3000"
+    volumes:
+      # Material de ingesta RAG (UC-011, npm run ingest:rag) -- rutas relativas al directorio
+      # del compose file (/opt/mathmindia). Crear en el host antes del primer `up`:
+      # mkdir -p /opt/mathmindia/rag/input /opt/mathmindia/rag/history
+      - ./rag/input:/workspace/rag/input
+      - ./rag/history:/workspace/rag/history
     depends_on:
       postgres:
         condition: service_healthy
