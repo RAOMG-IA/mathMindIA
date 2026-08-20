@@ -16,5 +16,9 @@ export function formatAvgResponseTime(avgResponseTimeMs: number): string {
 // ratingChange puede ser negativo (ADR-005) -- el signo "+" explicito en positivos es lo que
 // distingue "mejoraste" de "empeoraste" de un vistazo, un numero negativo ya se lee solo.
 export function formatRatingChange(ratingChange: number): string {
-  return ratingChange > 0 ? `+${ratingChange}` : `${ratingChange}`
+  // AdaptiveDifficultyEngine (ADR-005) devuelve un float de coma flotante -- sin redondear se
+  // veia p. ej. "+21.974072196278257" en la UI. Mismo criterio que formatAvgResponseTime
+  // (.toFixed) en vez de mostrar la precision interna del motor.
+  const rounded = ratingChange.toFixed(1)
+  return ratingChange > 0 ? `+${rounded}` : rounded
 }

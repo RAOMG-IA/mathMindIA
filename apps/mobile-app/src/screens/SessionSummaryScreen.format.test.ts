@@ -31,14 +31,18 @@ describe('formatAvgResponseTime', () => {
 
 describe('formatRatingChange', () => {
   it('antepone "+" a un cambio positivo', () => {
-    expect(formatRatingChange(15)).toBe('+15')
+    expect(formatRatingChange(15)).toBe('+15.0')
   })
 
   it('deja el signo "-" tal cual en un cambio negativo', () => {
-    expect(formatRatingChange(-8)).toBe('-8')
+    expect(formatRatingChange(-8)).toBe('-8.0')
   })
 
   it('no antepone signo a un cambio de cero', () => {
-    expect(formatRatingChange(0)).toBe('0')
+    expect(formatRatingChange(0)).toBe('0.0')
+  })
+
+  it('redondea a 1 decimal el float que devuelve AdaptiveDifficultyEngine (ADR-005)', () => {
+    expect(formatRatingChange(21.974072196278257)).toBe('+22.0')
   })
 })
