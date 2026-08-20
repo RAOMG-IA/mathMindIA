@@ -121,7 +121,7 @@ Resources:
   SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: MathMind AI - SSH (operador) + API :3000 (publico)
+      GroupDescription: MathMind AI - SSH (operador) + API :3000 + Web :8081 (publico)
       VpcId: !Ref Vpc
       SecurityGroupIngress:
         - IpProtocol: tcp
@@ -131,6 +131,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3000
           ToPort: 3000
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8081
+          ToPort: 8081
           CidrIp: 0.0.0.0/0
       Tags: [{ Key: Name, Value: mathmindia-sg }]
 
@@ -273,6 +277,9 @@ Outputs:
   HealthCheck:
     Description: Health check de la API
     Value: !Sub http://${ElasticIp}:3000/health
+  WebUrl:
+    Description: URL publica del frontend web (build web de Expo, http por MVP)
+    Value: !Sub http://${ElasticIp}:8081
   SshCommand:
     Description: Conexion SSH a la instancia
     Value: !Sub ssh -i tu.pem ec2-user@${ElasticIp}

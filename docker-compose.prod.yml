@@ -74,6 +74,33 @@ services:
     networks:
       - mathmindia
 
+  mobile-web:
+    # Build web de Expo (apps/mobile-app) construido y publicado por GitHub Actions
+    # (job `deploy`, ver .github/workflows/e2e.yml) desde docker/mobile-web/Dockerfile.prod.
+    # EXPO_PUBLIC_API_BASE_URL queda fijado en build time dentro del bundle -- si cambia
+    # el Elastic IP hay que reconstruir/publicar la imagen, no basta con recrear el contenedor.
+    image: ghcr.io/raomg-ia/mathmindia-mobile-web:latest
+    container_name: mathmindia-prod-mobile-web
+    restart: unless-stopped
+    ports:
+      - "0.0.0.0:8081:8081"
+    healthcheck:
+      # node:22-slim no trae wget/curl (verificado: a diferencia de node:22 completo, que
+      # usa el backend) -- se comprueba con node puro, ya presente en la imagen.
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:8081/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - mathmindia
+
 volumes:
   pgdata:
   redisdata:

@@ -140,11 +140,59 @@ jobs:
           path: apps/mobile-app/test-results/screenshots/
           retention-days: 7
 
-  deploy:
-    name: Deploy a AWS (EC2 free tier)
-    # Solo push a main, y solo si quality+e2e pasaron -- nunca en pull_request (ADR-018).
+  sync-repo:
+    name: Sincronizar repo en EC2 (git + CORS)
+    # Paso compartido previo a los dos deploys independientes (backend/mobile-web): hace
+    # una unica vez el `git reset --hard` + el patch de CORS_ALLOWED_ORIGINS en .env.prod
+    # sobre la instancia. Si cada deploy hiciera su propio git reset, al correr en paralelo
+    # podrian pisarse entre si sobre el mismo checkout /opt/mathmindia.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [quality, e2e]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write # requerido por aws-actions/configure-aws-credentials (OIDC)
+      contents: read
+    steps:
+      - name: Configurar credenciales AWS (OIDC, sin claves de larga duracion)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Sincronizar via SSM (git reset --hard + CORS_ALLOWED_ORIGINS)
+        env:
+          INSTANCE_ID: ${{ vars.AWS_EC2_INSTANCE_ID }}
+        run: |
+          set -euo pipefail
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "mathmindia sync-repo ${{ github.sha }}" \
+            --parameters commands='[
+              "set -euo pipefail",
+              "cd /opt/mathmindia",
+              "git fetch --all",
+              "git reset --hard origin/main",
+              "sed -i '"'"'s#^CORS_ALLOWED_ORIGINS=.*#CORS_ALLOWED_ORIGINS=http://${{ vars.AWS_ELASTIC_IP }}:8081#'"'"' .env.prod"
+            ]' \
+            --query "Command.CommandId" --output text)
+          echo "SSM CommandId: $COMMAND_ID"
+
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" || true
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+            --query "{Status:Status,StdOut:StandardOutputContent,StdErr:StandardErrorContent}" \
+            --output json | tee /tmp/ssm-result.json
+
+          STATUS=$(node -pe "JSON.parse(require('fs').readFileSync('/tmp/ssm-result.json')).Status")
+          [ "$STATUS" = "Success" ]
+
+  deploy-backend:
+    name: Deploy backend (EC2 free tier)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [sync-repo]
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -189,7 +237,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
-      - name: Desplegar via SSM (git pull + docker compose pull + up -d)
+      - name: Desplegar via SSM (docker compose pull + up -d backend)
         env:
           INSTANCE_ID: ${{ vars.AWS_EC2_INSTANCE_ID }}
         run: |
@@ -197,14 +245,12 @@ jobs:
           COMMAND_ID=$(aws ssm send-command \
             --instance-ids "$INSTANCE_ID" \
             --document-name "AWS-RunShellScript" \
-            --comment "mathmindia CD ${{ github.sha }}" \
+            --comment "mathmindia deploy-backend ${{ github.sha }}" \
             --parameters commands='[
               "set -euo pipefail",
               "cd /opt/mathmindia",
-              "git fetch --all",
-              "git reset --hard origin/main",
-              "docker compose --env-file .env.prod -f docker-compose.prod.yml pull",
-              "docker compose --env-file .env.prod -f docker-compose.prod.yml up -d",
+              "docker compose --env-file .env.prod -f docker-compose.prod.yml pull backend",
+              "docker compose --env-file .env.prod -f docker-compose.prod.yml up -d backend",
               "for i in $(seq 1 30); do curl -fsS http://localhost:3000/health >/dev/null 2>&1 && exit 0; sleep 5; done",
               "echo NO RESPONDIO A /health TRAS EL DEPLOY >&2; docker compose -f docker-compose.prod.yml logs --tail 100 backend; exit 1"
             ]' \
@@ -221,5 +267,82 @@ jobs:
           STATUS=$(node -pe "JSON.parse(require('fs').readFileSync('/tmp/ssm-result.json')).Status")
           [ "$STATUS" = "Success" ]
 
-      - name: Verificar health publico (Elastic IP)
+      - name: Verificar health publico del backend (Elastic IP)
         run: curl -fsS "http://${{ vars.AWS_ELASTIC_IP }}:3000/health"
+
+  deploy-mobile-web:
+    name: Deploy frontend web (EC2 free tier)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [sync-repo]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      id-token: write # requerido por aws-actions/configure-aws-credentials (OIDC)
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Login GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_PUSH_TOKEN }}
+
+      - name: Construir y publicar imagen mobile-web (frontend) en GHCR
+        # EXPO_PUBLIC_API_BASE_URL se hornea en el bundle en build time (Expo solo expone
+        # EXPO_PUBLIC_* al cliente durante el export) -- debe ser la IP publica del backend,
+        # nunca localhost. Igual que el backend: se construye aqui, el EC2 solo hace `pull`.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/mobile-web/Dockerfile.prod
+          push: true
+          build-args: |
+            EXPO_PUBLIC_API_BASE_URL=http://${{ vars.AWS_ELASTIC_IP }}:3000
+          tags: |
+            ghcr.io/raomg-ia/mathmindia-mobile-web:latest
+            ghcr.io/raomg-ia/mathmindia-mobile-web:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Configurar credenciales AWS (OIDC, sin claves de larga duracion)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Desplegar via SSM (docker compose pull + up -d mobile-web)
+        env:
+          INSTANCE_ID: ${{ vars.AWS_EC2_INSTANCE_ID }}
+        run: |
+          set -euo pipefail
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --comment "mathmindia deploy-mobile-web ${{ github.sha }}" \
+            --parameters commands='[
+              "set -euo pipefail",
+              "cd /opt/mathmindia",
+              "docker compose --env-file .env.prod -f docker-compose.prod.yml pull mobile-web",
+              "docker compose --env-file .env.prod -f docker-compose.prod.yml up -d mobile-web",
+              "for i in $(seq 1 30); do curl -fsS http://localhost:8081/ >/dev/null 2>&1 && exit 0; sleep 5; done",
+              "echo NO RESPONDIO TRAS EL DEPLOY >&2; docker compose -f docker-compose.prod.yml logs --tail 100 mobile-web; exit 1"
+            ]' \
+            --query "Command.CommandId" --output text)
+          echo "SSM CommandId: $COMMAND_ID"
+
+          aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" || true
+
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+            --query "{Status:Status,StdOut:StandardOutputContent,StdErr:StandardErrorContent}" \
+            --output json | tee /tmp/ssm-result.json
+
+          STATUS=$(node -pe "JSON.parse(require('fs').readFileSync('/tmp/ssm-result.json')).Status")
+          [ "$STATUS" = "Success" ]
+
+      - name: Verificar salud publica del frontend (Elastic IP)
+        run: curl -fsS "http://${{ vars.AWS_ELASTIC_IP }}:8081/" >/dev/null
