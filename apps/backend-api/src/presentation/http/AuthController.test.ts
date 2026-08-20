@@ -15,6 +15,7 @@ import {
   SequentialIdGenerator,
 } from '@mathmind/shared-testing'
 import { AuthController } from './AuthController.js'
+import { GuestLoginUseCase } from '../../application/use-cases/GuestLoginUseCase.js'
 import { LoginUseCase } from '../../application/use-cases/LoginUseCase.js'
 import { RegisterUseCase } from '../../application/use-cases/RegisterUseCase.js'
 
@@ -26,16 +27,18 @@ describe('AuthController', () => {
     const credentials = new InMemoryUserCredentialsRepository()
     const passwordHasher = new FakePasswordHasher()
     const tokenIssuer = new FakeTokenIssuer()
+    const ids = new SequentialIdGenerator('user')
     const registerUseCase = new RegisterUseCase(
       users,
       credentials,
       passwordHasher,
       tokenIssuer,
-      new SequentialIdGenerator('user'),
+      ids,
       new FixedClock(new Date('2026-08-07T00:00:00Z')),
     )
     const loginUseCase = new LoginUseCase(users, credentials, passwordHasher, tokenIssuer)
-    controller = new AuthController(registerUseCase, loginUseCase)
+    const guestLoginUseCase = new GuestLoginUseCase(registerUseCase, ids)
+    controller = new AuthController(registerUseCase, loginUseCase, guestLoginUseCase)
   })
 
   it('register: mapea RegisterRequestDto -> RegisterResponseDto', async () => {
@@ -60,5 +63,13 @@ describe('AuthController', () => {
     await controller.register({ email: 'user@example.com', password: 'correcta', academicLevel: 'Secundaria' })
 
     await expect(controller.login({ email: 'user@example.com', password: 'incorrecta' })).rejects.toThrow()
+  })
+
+  it('guestLogin (US-009): crea una cuenta de invitado y devuelve email + userId + sessionToken', async () => {
+    const result = await controller.guestLogin('8.8.8.8')
+
+    expect(result.userId).toBeDefined()
+    expect(result.sessionToken).toBeDefined()
+    expect(result.email).toMatch(/^publico\d{6}@invitado\.mathmind\.local$/)
   })
 })

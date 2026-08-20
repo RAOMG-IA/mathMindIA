@@ -39,6 +39,20 @@ describe('fetchClient', () => {
     expect(headers.get('Authorization')).toBeNull()
   })
 
+  it('no añade Authorization en /auth/guest (US-009, tampoco requiere sesión previa)', async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify({ ok: true }), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchClient('/auth/guest', { method: 'POST' })
+
+    const [, init] = fetchMock.mock.calls[0]
+    const headers = new Headers(init?.headers)
+    expect(headers.get('Authorization')).toBeNull()
+  })
+
   it('devuelve el body parseado como JSON en una respuesta ok', async () => {
     vi.stubGlobal(
       'fetch',

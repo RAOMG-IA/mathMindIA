@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { loginRequest, registerRequest } from '../requests/auth'
+import { guestLoginRequest, loginRequest, registerRequest } from '../requests/auth'
 import { createTokenStorage } from '../../store/createTokenStorage'
 import { useSessionStore } from '../../store/useSessionStore'
 
@@ -29,6 +29,20 @@ export function useLogin() {
       void useSessionStore
         .getState()
         .login({ userId: response.userId, email: variables.email, sessionToken: response.sessionToken }, createTokenStorage())
+    },
+  })
+}
+
+// US-009. A diferencia de useRegister/useLogin, no hay `variables` (guestLoginRequest no toma
+// argumentos) -- el email se lee de la respuesta, la unica de las tres que lo incluye
+// (GuestLoginResponseDto), precisamente porque el cliente no lo conoce de antemano.
+export function useGuestLogin() {
+  return useMutation({
+    mutationFn: guestLoginRequest,
+    onSuccess: (response) => {
+      void useSessionStore
+        .getState()
+        .login({ userId: response.userId, email: response.email, sessionToken: response.sessionToken }, createTokenStorage())
     },
   })
 }

@@ -16,6 +16,7 @@ Origen: lista candidata de [STATUS.md](../STATUS.md) (pendiente #4).
 | [US-006](US-006-finalizar-sesion.md) | Finalizar Sesión | Usuario en sesión activa | UC-006 End Session | `(app)/session/[sessionId]` (acción) + `(app)/session/[sessionId]/summary` (resultado) |
 | [US-007](US-007-ver-estadisticas.md) | Ver Estadísticas | Usuario registrado | Sin UC asignado todavía — ver nota | `(app)/statistics` |
 | [US-008](US-008-subir-material-rag.md) | Consolidar Base de Conocimiento (RAG) | Administrador del sistema | [UC-011](../use-cases/UC-011-ingest-knowledge-base.md) Ingest Knowledge Base | — (acceso directo al servidor, sin pantalla) |
+| [US-009](US-009-acceso-invitado.md) | Acceso rápido sin registro | Visitante | Sin UC asignado todavía — reutiliza el alta de US-001 | `(auth)/login` |
 
 ## Nota de trazabilidad
 
@@ -26,5 +27,7 @@ Origen: lista candidata de [STATUS.md](../STATUS.md) (pendiente #4).
 **US-008 → UC-011**: [UC-011](../use-cases/UC-011-ingest-knowledge-base.md) (Ingest Knowledge Base) cierra el hueco, definido en [ADR-014](../ADR/ADR-014_rag.md) junto con las decisiones que esta historia dejaba en "Fuera de alcance" (asociación fichero↔Tema, tecnología de indexado vectorial, persistencia del registro de ingesta).
 
 **Columna "Pantalla `mobile-app`"**: mapeo fijado en [ADR-015](../ADR/ADR-015_mobile_app_screens.md), no una decisión de producto — las User Stories siguen sin diseño técnico, la columna solo referencia dónde vive cada una en la app.
+
+**US-009 sin caso de uso todavía**: reutiliza el mecanismo de alta de US-001 (Registro) con datos autogenerados, pero el "Fuera de alcance" de esa historia deja explícitamente para Architecture si eso significa reutilizar `POST /auth/register` desde el cliente o un endpoint dedicado — falta formalizar junto con el resto del diseño técnico, solicitada directamente por el usuario (Project Director) el 2026-08-20 para facilitar la corrección del TFM.
 
 Registrado en `.ai/prompts/product.md`.

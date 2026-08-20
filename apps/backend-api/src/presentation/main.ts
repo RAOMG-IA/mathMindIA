@@ -25,6 +25,7 @@ import { PrismaHintRepository } from '../infrastructure/repositories/PrismaHintR
 import { PostgresKnowledgeBaseIndex } from '../infrastructure/rag/PostgresKnowledgeBaseIndex.js'
 import { XenovaEmbedder } from '../infrastructure/rag/XenovaEmbedder.js'
 import { RegisterUseCase } from '../application/use-cases/RegisterUseCase.js'
+import { GuestLoginUseCase } from '../application/use-cases/GuestLoginUseCase.js'
 import { LoginUseCase } from '../application/use-cases/LoginUseCase.js'
 import { StartSessionUseCase } from '../application/use-cases/StartSessionUseCase.js'
 import { EndSessionUseCase } from '../application/use-cases/EndSessionUseCase.js'
@@ -143,10 +144,14 @@ const generateExerciseBatchUseCase = new GenerateExerciseBatchUseCase(
 const updateDifficultyUseCase = new UpdateDifficultyUseCase(exercises)
 const selectNextExerciseUseCase = new SelectNextExerciseUseCase(exercises, users)
 
+const registerUseCase = new RegisterUseCase(users, credentials, passwordHasher, tokenIssuer, idGenerator, clock)
+
 const controllers = {
   auth: new AuthController(
-    new RegisterUseCase(users, credentials, passwordHasher, tokenIssuer, idGenerator, clock),
+    registerUseCase,
     new LoginUseCase(users, credentials, passwordHasher, tokenIssuer),
+    // US-009: reutiliza la misma instancia de RegisterUseCase -- sin logica de alta duplicada.
+    new GuestLoginUseCase(registerUseCase, idGenerator),
   ),
   session: new SessionController(
     new StartSessionUseCase(temas, sessions, users, selectNextExerciseUseCase, idGenerator, clock),

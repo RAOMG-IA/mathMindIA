@@ -275,3 +275,28 @@ estado: done
 **Decisión tomada**: 3 hallazgos confirmados, priorizados por severidad real (1 y 2 tienen impacto de seguridad genuino; 3 es hardening preventivo). Pasan al Developer Agent para corrección con TDD — ver `.ai/prompts/developer.md`.
 
 **Output generado**: esta entrada.
+
+---
+
+---
+task_id: STATUS-063
+date: 2026-08-21
+agentes: [security]
+flujo: [product, architecture, test, developer, reviewer, security, documentation]
+artefactos: [apps/backend-api/src/application/use-cases/GuestLoginUseCase.ts, apps/backend-api/src/presentation/http/routes.ts, apps/mobile-app/src/api/fetchClient.ts]
+estado: done
+---
+
+## 2026-08-21 — US-009 "Prueba sin registrarte" (creación anónima de cuentas)
+
+**Input**: El usuario (Project Director) pidió pasar Security sobre US-009 antes de comitear, si no hay objeciones.
+
+**Contexto utilizado**: `.ai/skills/security.md` (checklist: OWASP Top 10, gestión de secretos, validación de inputs, dependencias, ADR-012), `ADR-012` (línea base de seguridad ya aceptada: sin rate limiting/MFA, diferido explícitamente). Alcance: `GuestLoginUseCase`, `routes.ts` (`/auth/guest`), `fetchClient.ts` (nueva ruta pública).
+
+**Hallazgos**:
+1. **No bloqueante, nueva superficie a vigilar — creación de cuentas sin ninguna credencial ni fricción**: `POST /auth/guest` no exige nada del cliente (sin body, sin email/password propios) — es la ruta más trivial de automatizar de las tres de auth para generar filas `User` sin límite (crecimiento de base de datos, no denegación de servicio real dado que cada alta es barata). No es una vulnerabilidad nueva de por sí: ADR-012 ya deja diferido explícitamente el rate limiting para **todo** el sistema, no solo para esta ruta — pero esta ruta es la que más invita a automatizarlo, al no requerir ni siquiera un email distinto por intento. Ningún cambio de código en esta pasada (Security no introduce dependencias nuevas per sus Restricciones; un rate limiter sería una dependencia nueva, decisión de alcance mayor que esta historia). Recomendado como trabajo futuro si el proyecto escala más allá del TFM.
+2. **Sin hallazgos** en gestión de secretos (el password derivado de la IP se hashea con el mismo `BcryptPasswordHasher` que el resto de altas — nunca se persiste ni se devuelve en texto plano, ni siquiera en la respuesta del endpoint), inyección/validación de inputs (sin request body que validar — todos los datos se generan en el servidor), ni cumplimiento de ADR-012 (mismo mínimo de contraseña de 8 caracteres aplicado vía `RegisterUseCase`, sin excepción para el flujo de invitado; dominio sintético `invitado.mathmind.local`, no resoluble, sin riesgo de envío accidental de correo). Confirmado además que `fetchClient.ts` (mobile-app) ya no intentaba adjuntar `Authorization` a esta ruta pública tras el fix aplicado en la misma tarea (`PUBLIC_PATHS` ampliado).
+
+**Decisión tomada**: ningún hallazgo bloqueante. El hallazgo #1 queda como riesgo aceptado y documentado (mismo criterio ya fijado en ADR-012 para el resto del sistema), no un hallazgo nuevo que esta historia deba resolver por sí sola.
+
+**Output generado**: esta entrada.

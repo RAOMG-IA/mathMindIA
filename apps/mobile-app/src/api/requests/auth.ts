@@ -1,4 +1,10 @@
-import type { LoginRequestDto, LoginResponseDto, RegisterRequestDto, RegisterResponseDto } from '@mathmind/shared-types'
+import type {
+  GuestLoginResponseDto,
+  LoginRequestDto,
+  LoginResponseDto,
+  RegisterRequestDto,
+  RegisterResponseDto,
+} from '@mathmind/shared-types'
 import { fetchClient } from '../fetchClient'
 
 // Funciones puras (sin React/TanStack Query) que mapean 1:1 a las rutas de openapi.yaml --
@@ -16,4 +22,10 @@ export function loginRequest(dto: LoginRequestDto): Promise<LoginResponseDto> {
     method: 'POST',
     body: JSON.stringify(dto),
   })
+}
+
+// US-009: sin body -- el servidor genera email/password/academicLevel, ver
+// GuestLoginUseCase (backend-api).
+export function guestLoginRequest(): Promise<GuestLoginResponseDto> {
+  return fetchClient<GuestLoginResponseDto>('/auth/guest', { method: 'POST' })
 }
