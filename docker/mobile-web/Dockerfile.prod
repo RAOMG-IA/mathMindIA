@@ -1,0 +1,56 @@
+# Imagen de PRODUCCION del frontend web de MathMind AI (apps/mobile-app exportado como
+# build web de Expo). Ver docs/DEPLOY_AWS_FREE_TIER.md y docker/node/Dockerfile.prod
+# (mismo patron: se construye aqui, en GitHub Actions, y el EC2 solo hace `pull`).
+#
+# EXPO_PUBLIC_API_BASE_URL se inyecta en build time (Expo solo expone EXPO_PUBLIC_* al
+# bundle de cliente durante el export, no en runtime) -- debe apuntar a la URL publica
+# del backend (Elastic IP), no a localhost.
+
+FROM node:22 AS builder
+
+WORKDIR /workspace
+
+# 1) Solo manifiestos + lockfile para cachear npm ci (mismo motivo que Dockerfile.prod:
+#    npm workspaces resuelve el glob "apps/*"/"packages/*" contra lo que exista en el
+#    contexto -- no hace falta copiar backend-api/ai-engine, mobile-app no depende de ellos).
+COPY package.json package-lock.json ./
+COPY tsconfig.base.json turbo.json ./
+COPY apps/mobile-app/package.json apps/mobile-app/package.json
+COPY packages/shared-config/package.json packages/shared-config/package.json
+COPY packages/shared-constants/package.json packages/shared-constants/package.json
+COPY packages/shared-domain/package.json packages/shared-domain/package.json
+COPY packages/shared-testing/package.json packages/shared-testing/package.json
+COPY packages/shared-types/package.json packages/shared-types/package.json
+COPY packages/shared-utils/package.json packages/shared-utils/package.json
+
+RUN npm ci
+
+# 2) Fuentes de los paquetes del workspace + mobile-app.
+COPY packages ./packages
+COPY apps/mobile-app ./apps/mobile-app
+
+WORKDIR /workspace/apps/mobile-app
+
+ARG EXPO_PUBLIC_API_BASE_URL
+ENV EXPO_PUBLIC_API_BASE_URL=${EXPO_PUBLIC_API_BASE_URL}
+ENV CI=1
+
+RUN npx expo export --platform web --output-dir dist
+
+# ---------- Runtime ----------
+# Servidor estatico minimo ya existente para E2E (apps/mobile-app/e2e/serve.mjs, cero
+# dependencias de terceros) -- se reutiliza tal cual para produccion en vez de anadir
+# nginx/serve. Calcula su raiz como "../dist/" relativo a si mismo, por eso se preserva
+# la misma estructura de carpetas (e2e/serve.mjs junto a dist/) dentro de la imagen.
+FROM node:22-slim AS runtime
+
+WORKDIR /app
+
+COPY --from=builder /workspace/apps/mobile-app/dist ./dist
+COPY --from=builder /workspace/apps/mobile-app/e2e/serve.mjs ./e2e/serve.mjs
+
+ENV E2E_WEB_HOST=0.0.0.0
+ENV E2E_WEB_PORT=8081
+EXPOSE 8081
+
+CMD ["node", "e2e/serve.mjs"]

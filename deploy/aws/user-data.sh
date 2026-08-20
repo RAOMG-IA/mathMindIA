@@ -8,6 +8,23 @@ exec > >(tee /var/log/mathmindia-bootstrap.log) 2>&1
 
 echo "[bootstrap] Inicio $(date -u)"
 
+# 0) Swap 2G: la t3.micro (1 GiB RAM) se queda sin memoria y llega a colgarse a nivel de red
+# (EC2 status check "impaired", no solo la app) con cargas puntuales pesadas -- p. ej.
+# generate:exercises/ingest:rag, que cargan un modelo de embeddings local (XenovaEmbedder) en
+# el mismo proceso ademas de Postgres+Redis+backend. Sin swap, el OOM killer del kernel puede
+# tumbar procesos criticos o dejar la instancia inutilizable hasta un reboot manual.
+# Idempotente por si el UserData se re-ejecuta.
+if [ ! -f /swapfile ]; then
+  echo "[bootstrap] Creando swapfile de 2G"
+  sudo fallocate -l 2G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1M count=2048
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile
+  sudo swapon /swapfile
+  echo '/swapfile swap swap defaults 0 0' | sudo tee -a /etc/fstab
+else
+  echo "[bootstrap] swapfile ya existe -> no se recrea"
+fi
+
 # 1) Docker + git (AL2023 no trae ninguno de los dos por dnf con lo minimo necesario).
 sudo dnf install -y docker git
 sudo systemctl enable --now docker
