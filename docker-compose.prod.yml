@@ -66,8 +66,9 @@ services:
       - "0.0.0.0:3000:3000"
     volumes:
       # Material de ingesta RAG (UC-011, npm run ingest:rag) -- rutas relativas al directorio
-      # del compose file (/opt/mathmindia). Crear en el host antes del primer `up`:
-      # mkdir -p /opt/mathmindia/rag/input /opt/mathmindia/rag/history
+      # del compose file (/opt/mathmindia). El bootstrap (cloudformation.yml/user-data.sh) crea
+      # estos directorios y su grupo compartido mathmindia-rag (root + ec2-user, setgid) --
+      # no hace falta crearlos a mano salvo en una instancia provisionada antes de ese cambio.
       - ./rag/input:/workspace/rag/input
       - ./rag/history:/workspace/rag/history
     depends_on:
