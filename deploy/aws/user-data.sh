@@ -68,6 +68,19 @@ else
   fi
 fi
 
+# 2b) Grupo compartido para el material de ingesta RAG (rag/input, rag/history): root (docker
+# compose via SSM) y ec2-user (subida por SFTP/FileZilla, puerto 22 restringido a AdminIpCidr)
+# necesitan poder escribir ahi sin pisarse los permisos entre sesiones. setgid (chmod 2775) hace
+# que los ficheros nuevos hereden el grupo sea quien sea quien los cree. Idempotente por si el
+# UserData se re-ejecuta.
+if ! getent group mathmindia-rag >/dev/null; then
+  sudo groupadd mathmindia-rag
+fi
+sudo usermod -aG mathmindia-rag ec2-user
+sudo mkdir -p "$APP_DIR/rag/input" "$APP_DIR/rag/history"
+sudo chown root:mathmindia-rag "$APP_DIR/rag/input" "$APP_DIR/rag/history"
+sudo chmod 2775 "$APP_DIR/rag/input" "$APP_DIR/rag/history"
+
 # 3) Generar secretos (solo si no existen): JWT_SECRET y password de Postgres.
 ENV_FILE="$APP_DIR/.env.prod"
 if [ ! -f "$ENV_FILE" ]; then
