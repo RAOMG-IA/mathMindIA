@@ -3,6 +3,28 @@ Implement only after tests exist. Follow TDD and Clean Architecture.
 
 ---
 
+---
+task_id: STATUS-064
+date: 2026-08-21
+agentes: [developer]
+flujo: [product, architecture, test, developer, reviewer, security, documentation]
+estado: done
+---
+
+## 2026-08-21 — Implementación de US-010 Cerrar sesión (TDD Green + wiring)
+
+**Input**: continuación directa del Red de `.ai/prompts/test.md` (misma fecha) — implementar `computeInactivityPhase` y todo lo que la adenda ADR-015 dejó diseñado (logout manual, hook de inactividad, modal de aviso).
+
+**Contexto utilizado**: adenda ADR-015 (mecanismo exacto ya especificado, incluida la ramificación por `Platform.OS`), `apps/mobile-app/src/store/useSessionStore.ts` (`logout`/`login` ya existentes, sin tocar), `apps/mobile-app/src/components/Combobox` (precedente de uso del `Modal` nativo de React Native), `apps/mobile-app/src/components/AppHeader/AppHeader.styles.ts` (paleta `COLORS`/estilo de `navButton` reutilizado para el botón nuevo y para `InactivityWarningModal`).
+
+**Decisión tomada**: `computeInactivityPhase` (Green, `apps/mobile-app/src/store/inactivity.ts`) implementa la máquina de 3 estados tal cual la especificó Architecture. `useInactivityLogout` (hook, sin test) monta un único `setInterval` de 1s que llama a `computeInactivityPhase`, ramifica la fuente de eventos de actividad por `Platform.OS` (`onTouchStart` expuesto para que `(app)/_layout.tsx` lo cablee en su `View` raíz; `mousedown`/`keydown` de `window` registrados internamente solo en Web), y llama `useSessionStore.getState().logout(createTokenStorage())` al expirar. `InactivityWarningModal` (componente nuevo, carpeta propia con `.styles.ts`+`index.ts`, mismo patrón que el resto de `src/components/`) usa el `Modal` nativo de React Native. Botón "Cerrar sesión" añadido a `AppHeader.tsx` junto a Inicio/Estadísticas, mismo estilo `navButton`. `(app)/_layout.tsx` monta `useInactivityLogout()` una vez (antes de los `if` de `route`, respetando las Rules of Hooks) y envuelve `<AppHeader/>`+`<Slot/>`+`<InactivityWarningModal/>` en la `View` raíz con `onTouchStart={registerActivity}`.
+
+**Verificación real, no solo con tests**: dos scripts Playwright desechables (borrados tras usarlos, no forman parte del repo) contra la build web real de `mobile-app` (`npx expo export --platform web` + `e2e/serve.mjs`) y el backend Docker real. Detectado y corregido un hueco del propio entorno de pruebas al hacerlo: el servidor de `:8081` llevaba sirviendo un `dist/` estático de una build anterior a este cambio (`e2e/serve.mjs` no tiene recarga en caliente) — sin el rebuild explícito, la primera verificación habría dado un falso negativo ("botón no existe"). Con el rebuild: (1) logout manual confirmado de punta a punta (clic → redirige a login → recarga confirma que la sesión se borró de verdad). (2) cierre por inactividad confirmado con el reloj virtual de Playwright (`page.clock`, instalado antes del login para que el `setInterval` nazca ya controlado): activo a los 13 min, aviso a los 14 min, "Seguir conectado" lo oculta y reinicia el contador, cierre real 15 min después sin más actividad.
+
+**Output generado**: `apps/mobile-app/src/store/{inactivity,useInactivityLogout}.ts`, `apps/mobile-app/src/components/InactivityWarningModal/` (nuevo), `apps/mobile-app/src/components/AppHeader/AppHeader.tsx`, `apps/mobile-app/src/components/index.ts`, `apps/mobile-app/app/(app)/_layout.tsx`. 6/6 tests nuevos, 86/86 en total. `npx turbo run typecheck lint test --filter=@mathmind/mobile-app`: 6/6 en verde.
+
+---
+
 ## 2026-08-11 — Fix: "Siguiente ejercicio" no funcionaba (Modo Resolución, `calc.limites`) + UC-008 flujo 2b
 
 **Input**: el usuario reportó que "Siguiente ejercicio" no funcionaba en Modo Resolución para el Tema `calc.limites`, e hipotetizó que la causa era el Exercise Pool vacío, proponiendo que en ese caso se pidiera un lote nuevo al LLM (UC-008 flujo 2b, ya diseñado en la doc pero nunca implementado).

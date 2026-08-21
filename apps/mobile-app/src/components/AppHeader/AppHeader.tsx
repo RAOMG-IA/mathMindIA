@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useUserStatistics } from '../../api'
+import { createTokenStorage } from '../../store/createTokenStorage'
 import { useSessionStore } from '../../store/useSessionStore'
 import { styles } from './AppHeader.styles'
 
@@ -16,6 +17,13 @@ export function AppHeader() {
   const statistics = useUserStatistics()
 
   const levelLabel = statistics.data ? `${statistics.data.academicLevel} · ${Math.round(statistics.data.rating)}` : '···'
+
+  // US-010: solo descarta la sesion (store + TokenStorage) -- el guard reactivo de
+  // (app)/_layout.tsx redirige a login en cuanto sessionToken pasa a null, mismo patron ya
+  // demostrado por expireSession() ante un 401 real, sin navegacion explicita aqui.
+  function handleLogout() {
+    void useSessionStore.getState().logout(createTokenStorage())
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
@@ -41,6 +49,10 @@ export function AppHeader() {
           onPress={() => router.push('/(app)/statistics')}
         >
           <Text style={styles.navButtonText}>Estadísticas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navButton} accessibilityRole="button" onPress={handleLogout}>
+          <Text style={styles.navButtonText}>Cerrar sesión</Text>
         </TouchableOpacity>
       </View>
     </View>

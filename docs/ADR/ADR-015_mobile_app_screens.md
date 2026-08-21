@@ -98,3 +98,34 @@ Un hook de TanStack Query por ruta de [`apps/backend-api/openapi.yaml`](../../ap
 ## Trazabilidad
 
 Registrado en `.ai/prompts/architecture.md`.
+
+## Adenda 2026-08-21: US-010 Cerrar sesión (logout manual + inactividad)
+
+[US-010](../user-stories/US-010-cerrar-sesion.md) pide dos disparadores para el mismo resultado (terminar la sesión autenticada y volver a login) — botón explícito y cierre automático tras 15 minutos de inactividad con aviso previo. Ambos se resuelven dentro de lo que este ADR ya construyó, sin ADR nuevo: el guard reactivo de `(app)/_layout.tsx` y el propio `useSessionStore`.
+
+**Punto de partida verificado en código antes de diseñar**: `useSessionStore.logout(storage)` ya existe (construido junto con `hydrate`/`login` en la primera implementación real de `mobile-app`, `STATUS.md` #35) pero ningún componente lo invoca todavía. El guard de `resolveSessionRoute` en `(app)/_layout.tsx` ya reacciona a `sessionToken === null` con un `<Redirect href="/(auth)/login" />` — así es como `expireSession()` (401 real, `fetchClient.ts`) ya "cierra sesión" hoy sin ninguna llamada explícita a `router`. Ambos mecanismos nuevos reutilizan exactamente ese mismo patrón reactivo, en vez de introducir una navegación imperativa nueva.
+
+### Logout manual
+
+Nuevo botón "Cerrar sesión" en `AppHeader.tsx` (junto a Inicio/Estadísticas — ya es la cabecera común a las 5 pantallas autenticadas). El handler llama `useSessionStore.getState().logout(createTokenStorage())` y nada más: el guard de `(app)/_layout.tsx` hace el resto en el siguiente render, mismo criterio que `expireSession()`.
+
+### Cierre por inactividad
+
+Hook nuevo `useInactivityLogout()`, montado una única vez en `(app)/_layout.tsx` (nunca en `(auth)/*`: por construcción ese layout solo renderiza cuando `resolveSessionRoute()` ya determinó que hay sesión, así que no hace falta guardarlo de "sesión inexistente").
+
+- **Constantes**: `INACTIVITY_TIMEOUT_MS = 15 * 60_000` (fijado por Product en US-010) y `INACTIVITY_WARNING_LEAD_MS = 60_000` — este segundo valor no lo fija la historia; judgment call de Architecture (avisar 1 minuto antes de expirar), documentado aquí igual que otros umbrales técnicos resueltos "al diseñar" en el resto del proyecto (p. ej. `MAX_ATTEMPTS` de `GenerateExerciseBatchUseCase`).
+- **Detección de actividad, ramificada por `Platform.OS`** — mismo patrón ya establecido para `TokenStorage` en este mismo ADR, no uno nuevo:
+  - **Nativo (iOS/Android)**: `onTouchStart` en la `View` raíz que ya envuelve `<AppHeader/>`+`<Slot/>` en `(app)/_layout.tsx`. Es un evento de toque crudo, no reclama el gesture responder — no interfiere con los `Touchable`/`Pressable` anidados de las pantallas, técnica estándar para "detectar cualquier toque sin bloquear a los hijos".
+  - **Web**: `window.addEventListener('mousedown' | 'keydown', …)`. Necesario aparte porque en web de escritorio la interacción por ratón no siempre dispara los eventos de touch sintéticos de react-native-web — sin esto, un usuario navegando solo con clics de ratón en Web no resetearía nunca el temporizador.
+- Cualquier evento de actividad reinicia ambos temporizadores (aviso + cierre). Al cumplirse `INACTIVITY_TIMEOUT_MS - INACTIVITY_WARNING_LEAD_MS` sin actividad, el hook expone `showWarning: true`; `(app)/_layout.tsx` renderiza un componente nuevo `InactivityWarningModal` (usa el `Modal` propio de React Native — mismo primitivo que ya usa `Combobox`, sin dependencia nueva) con un botón "Seguir conectado" que llama `dismissWarning()` (tratado como actividad: reinicia los temporizadores, oculta el aviso). Si no hay respuesta, al cumplirse el plazo completo el propio hook llama `useSessionStore.getState().logout(createTokenStorage())` — la misma acción de store que el botón manual, sin lógica de cierre de sesión duplicada.
+
+### Huecos aceptados, señalados para Security
+
+- **Scroll sin clic ni tecla en Web de escritorio no cuenta como actividad** (no hay listener de `wheel`/`scroll`) — se acepta porque el modelo de interacción real de esta app (responder ejercicios, pedir pistas, navegar) siempre implica un clic o una tecla, no solo lectura pasiva.
+- **El cierre de sesión (manual o por inactividad) no revoca nada en el servidor** — coincide con lo que la propia US-010 dejaba fuera de alcance: el JWT sigue siendo técnicamente válido hasta su expiración natural de 7 días (`JwtTokenIssuer`), solo se descarta la copia del cliente. Mismo riesgo aceptado, mismo motivo, que la persistencia de `sessionToken` en `localStorage` (web) ya documentada arriba en este ADR.
+- **El temporizador vive solo en memoria del proceso de la app** (no persistido) — cerrar y reabrir la app, o recargar en Web, reinicia el contador de inactividad a cero en vez de recordar el tiempo transcurrido. Coherente con que "reabrir la app dentro del periodo de validez de la sesión" ya es, por diseño, el escenario de "Sesión persistente" de US-002 — no se trata como una forma de inactividad.
+
+### Fuera de alcance (de esta adenda)
+
+- Escribir el hook/componentes reales (TSX) o sus tests — ciclo TDD posterior (Test Agent → Developer Agent), mismo patrón que el resto de este ADR.
+- Revocación de token en servidor — ver huecos arriba, decisión propia de Security si se retoma.

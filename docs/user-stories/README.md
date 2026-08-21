@@ -17,6 +17,7 @@ Origen: lista candidata de [STATUS.md](../STATUS.md) (pendiente #4).
 | [US-007](US-007-ver-estadisticas.md) | Ver Estadísticas | Usuario registrado | Sin UC asignado todavía — ver nota | `(app)/statistics` |
 | [US-008](US-008-subir-material-rag.md) | Consolidar Base de Conocimiento (RAG) | Administrador del sistema | [UC-011](../use-cases/UC-011-ingest-knowledge-base.md) Ingest Knowledge Base | — (acceso directo al servidor, sin pantalla) |
 | [US-009](US-009-acceso-invitado.md) | Acceso rápido sin registro | Visitante | Sin UC asignado todavía — reutiliza el alta de US-001 | `(auth)/login` |
+| [US-010](US-010-cerrar-sesion.md) | Cerrar sesión | Usuario autenticado | Sin UC asignado todavía | Las 5 pantallas de `(app)` (acción) → `(auth)/login` |
 
 ## Nota de trazabilidad
 
@@ -29,5 +30,7 @@ Origen: lista candidata de [STATUS.md](../STATUS.md) (pendiente #4).
 **Columna "Pantalla `mobile-app`"**: mapeo fijado en [ADR-015](../ADR/ADR-015_mobile_app_screens.md), no una decisión de producto — las User Stories siguen sin diseño técnico, la columna solo referencia dónde vive cada una en la app.
 
 **US-009 sin caso de uso todavía**: reutiliza el mecanismo de alta de US-001 (Registro) con datos autogenerados, pero el "Fuera de alcance" de esa historia deja explícitamente para Architecture si eso significa reutilizar `POST /auth/register` desde el cliente o un endpoint dedicado — falta formalizar junto con el resto del diseño técnico, solicitada directamente por el usuario (Project Director) el 2026-08-20 para facilitar la corrección del TFM.
+
+**US-010 vs. US-006**: mismo cuidado de nomenclatura que US-002 vs. US-003. US-006 termina una `Session` de entrenamiento; US-010 termina la sesión autenticada (logout), sin relación entre ambas — se puede cerrar sesión con o sin una `Session` de entrenamiento en curso.
 
 Registrado en `.ai/prompts/product.md`.

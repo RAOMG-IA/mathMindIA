@@ -1,6 +1,7 @@
 export { NeuralLoader, BackgroundGrid, ParticleField, COLORS } from './NeuralLoader'
 export { EmailInput, PasswordInput } from './inputs'
 export { AppHeader } from './AppHeader'
+export { InactivityWarningModal } from './InactivityWarningModal'
 export { AcademicLevelStars } from './AcademicLevelStars'
 export { Checkbox } from './Checkbox'
 export { RadioButton } from './RadioButton'

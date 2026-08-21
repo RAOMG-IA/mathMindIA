@@ -4,6 +4,26 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 ---
 
 ---
+task_id: STATUS-064
+date: 2026-08-21
+agentes: [test]
+flujo: [product, architecture, test, developer, reviewer, security, documentation]
+estado: done
+---
+
+## 2026-08-21 — Test de computeInactivityPhase (TDD Red, US-010)
+
+**Input**: continuación de la adenda ADR-015 (US-010) — antes de implementar el mecanismo de cierre por inactividad, tests de la única pieza pura y testeable del diseño: la función que decide en qué fase está la sesión (`active`/`warning`/`expired`), separada a propósito de la mecánica de timers/`window` (sin test, ver `.ai/prompts/developer.md`).
+
+**Contexto utilizado**: adenda ADR-015 (constantes `INACTIVITY_TIMEOUT_MS=15min`, `INACTIVITY_WARNING_LEAD_MS=1min`, semántica de las tres fases), mismo patrón ya usado para `resolveSessionRoute`/`invalidateStatisticsOnSessionStart` (lógica pura extraída y testeada, hook/wiring sin test).
+
+**Decisión tomada**: 6 casos — justo antes de entrar en aviso (`active`), justo al entrar (`warning`, límite inclusive), justo antes de expirar (sigue `warning`), justo al expirar (`expired`, límite inclusive), mucho después de expirar (sigue `expired`, no "rebota" a `warning`), y actividad ahora mismo (`active`). Cubre los cuatro límites exactos de la máquina de 3 estados, no solo casos intermedios.
+
+**Output generado**: `apps/mobile-app/src/store/inactivity.test.ts`. Verificado: `vitest run` → falla con "Failed to load url ./inactivity... Does the file exist?" — Red confirmado por la razón correcta. Implementación (Developer Agent, Green) en la misma sesión.
+
+---
+
+---
 task_id: STATUS-043
 date: 2026-08-09
 agentes: [test]

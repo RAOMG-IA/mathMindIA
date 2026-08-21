@@ -4,6 +4,28 @@ Define architecture, diagrams, ADRs and design decisions. Respect Clean Architec
 ---
 
 ---
+task_id: STATUS-064
+date: 2026-08-21
+handoff_ref: STATUS-064
+agentes: [architecture]
+flujo: [director, product, architecture]
+artefactos: [docs/ADR/ADR-015_mobile_app_screens.md]
+estado: done
+---
+
+## 2026-08-21 — Adenda ADR-015: US-010 Cerrar sesión (logout manual + inactividad)
+
+**Input**: continuación directa de la historia de usuario US-010 (director de agentes) — diseñar el mecanismo de logout manual y de cierre automático por inactividad (15 minutos, con aviso previo y opción de continuar, ya confirmados por el usuario en la fase de Product).
+
+**Contexto utilizado**: verificado en código antes de diseñar (no asumido desde la doc) que `useSessionStore.logout(storage)` ya existe (`STATUS.md` #35) pero sin ningún invocador en la UI; que `expireSession()` (`fetchClient.ts`, reacción a 401 real) ya demuestra que el guard reactivo de `resolveSessionRoute()`/`(app)/_layout.tsx` redirige a login solo con que `sessionToken` pase a `null`, sin ninguna llamada explícita a `router` — patrón a reutilizar tal cual, no a rediseñar. `AppHeader.tsx` (cabecera común a las 5 pantallas autenticadas, candidata natural para el botón). `ADR-015` (ya decide `TokenStorage` ramificado por `Platform.OS`, mismo criterio aplicado aquí para la detección de actividad).
+
+**Decisión tomada**: sin ADR nuevo — adenda sobre ADR-015 (mismo documento que ya posee `(app)/_layout.tsx`, `AppHeader` y la persistencia de sesión). Logout manual: botón nuevo en `AppHeader.tsx` que solo llama `logout(storage)`, sin navegación explícita. Inactividad: hook nuevo `useInactivityLogout()` montado una vez en `(app)/_layout.tsx`, con detección de actividad ramificada por plataforma (`onTouchStart` en nativo, `mousedown`/`keydown` de `window` en Web — necesario aparte porque la interacción de ratón en Web de escritorio no siempre dispara los eventos de touch sintéticos de react-native-web) y un `InactivityWarningModal` nuevo (usa el `Modal` propio de React Native, mismo primitivo que ya usa `Combobox`, sin dependencia nueva) para el aviso con opción de continuar. `INACTIVITY_WARNING_LEAD_MS` (1 minuto antes del cierre) es judgment call de Architecture, no especificado por Product. Huecos aceptados y señalados para Security: scroll sin clic/tecla en Web no cuenta como actividad; el cierre (manual o automático) no revoca el token en servidor, coherente con lo que la propia US-010 ya dejaba fuera de alcance.
+
+**Output generado**: `docs/ADR/ADR-015_mobile_app_screens.md` (adenda 2026-08-21). Sin código productivo ni tests (restricción de esta skill) — sigue Test Agent → Developer Agent.
+
+---
+
+---
 task_id: STATUS-052
 date: 2026-08-10
 agentes: [architecture]

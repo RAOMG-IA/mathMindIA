@@ -1,7 +1,8 @@
 import { Redirect, Slot } from 'expo-router'
 import { View } from 'react-native'
-import { AppHeader, NeuralLoader } from '../../src/components'
+import { AppHeader, InactivityWarningModal, NeuralLoader } from '../../src/components'
 import { resolveSessionRoute } from '../../src/store/sessionRouting'
+import { useInactivityLogout } from '../../src/store/useInactivityLogout'
 import { useSessionStore } from '../../src/store/useSessionStore'
 
 // Guard de autenticacion centralizado (ADR-015): protege las 5 pantallas de (app) en un unico
@@ -14,6 +15,12 @@ export default function AppLayout() {
   const sessionToken = useSessionStore((state) => state.sessionToken)
   const route = resolveSessionRoute({ isHydrated, sessionToken })
 
+  // US-010 (adenda ADR-015): montado solo aqui, nunca en (auth)/* -- este layout, por
+  // construccion, solo renderiza contenido protegido cuando ya hay sesion (route === 'home'),
+  // asi que no hace falta guardarlo contra "sesion inexistente" por separado. onTouchStart en la
+  // View raiz cubre nativo; el propio hook cubre Web (mousedown/keydown de window).
+  const { showWarning, registerActivity } = useInactivityLogout()
+
   if (route === 'loading') {
     return <NeuralLoader />
   }
@@ -23,9 +30,10 @@ export default function AppLayout() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1 }} onTouchStart={registerActivity}>
       <AppHeader />
       <Slot />
+      <InactivityWarningModal visible={showWarning} onContinue={registerActivity} />
     </View>
   )
 }

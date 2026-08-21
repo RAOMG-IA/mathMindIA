@@ -3,6 +3,32 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 
 ---
 
+---
+task_id: STATUS-064
+date: 2026-08-21
+agentes: [security]
+flujo: [product, architecture, test, developer, reviewer, security, documentation]
+artefactos: [apps/mobile-app/src/store/useInactivityLogout.ts, apps/mobile-app/src/components/AppHeader/AppHeader.tsx, docs/ADR/ADR-015_mobile_app_screens.md]
+estado: done
+---
+
+## 2026-08-21 — US-010 "Cerrar sesión" (logout manual + inactividad)
+
+**Input**: el usuario (Project Director) pidió pasar Reviewer y Security sobre US-010, sin objeciones del primero (`.ai/prompts/reviewer.md`, misma fecha).
+
+**Contexto utilizado**: `.ai/skills/security.md`, `docs/user-stories/US-010-cerrar-sesion.md` ("Fuera de alcance": revocación de token en servidor, explícitamente no pedida), adenda ADR-015 (ya señala los mismos dos huecos que confirma esta pasada).
+
+**Hallazgos**:
+1. **No bloqueante, ya señalado por Architecture, confirmado aquí — cerrar sesión (manual o por inactividad) no revoca nada en el servidor**: el JWT robado (p. ej. vía XSS sobre `localStorage` en Web, riesgo ya aceptado en ADR-015) sigue siendo válido hasta su expiración natural de 7 días (`JwtTokenIssuer`) aunque el usuario legítimo "cierre sesión" en su propio dispositivo — la función protege la sesión visible en el cliente, no revoca una credencial ya comprometida. Coherente con lo que la propia US-010 dejó fuera de alcance; no es una regresión introducida por esta historia, es el mismo modelo de amenaza que ya tenía el sistema (sin revocación de sesión en ningún punto del proyecto hasta ahora).
+2. **No bloqueante — el temporizador de inactividad es una función de producto, no un control de seguridad**: se basa en `Date.now()` del propio dispositivo del usuario y en eventos de interacción del lado cliente, ambos manipulables por quien tenga control del dispositivo (mismo motivo por el que US-009 ya documentó que la contraseña derivada de IP "no es un mecanismo de seguridad real"). No se corrige — no pretende serlo, es UX de sesión, no autenticación.
+3. **Sin hallazgos** en gestión de secretos (ningún secreto nuevo, sin tocar `.env`/JWT/bcrypt), validación de inputs (ningún endpoint ni formulario nuevo — solo interacción de UI local), ni cumplimiento de ADR-012 (no toca política de contraseñas, CORS ni línea base de seguridad existente).
+
+**Decisión tomada**: sin objeciones bloqueantes. Ambos hallazgos quedan documentados como riesgo aceptado, ya anticipado por Architecture — pasa a Documentation.
+
+**Output generado**: esta entrada.
+
+---
+
 ## 2026-08-12 — Cierre de hallazgo: puntos 3/4/5 de la revisión de skills (2026-08-06)
 
 **Input**: el usuario pidió revisar el estado de "solape de Salidas entre architecture.md/documentation.md" y "ejemplos desincronizados en knowledge-manager.md", listados como pendientes desde la revisión de `.ai/skills/*.md` del 2026-08-06 (STATUS-017: "Puntos 3, 4 y 5 quedan pendientes de confirmación del usuario, no resueltos todavía").

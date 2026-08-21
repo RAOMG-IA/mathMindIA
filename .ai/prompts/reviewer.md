@@ -4,6 +4,32 @@ Review code quality, architecture compliance, complexity and SOLID principles.
 ---
 
 ---
+task_id: STATUS-064
+date: 2026-08-21
+agentes: [reviewer]
+flujo: [product, architecture, test, developer, reviewer, security, documentation]
+artefactos: [apps/mobile-app/src/store/inactivity.ts, apps/mobile-app/src/store/useInactivityLogout.ts, apps/mobile-app/src/components/InactivityWarningModal, apps/mobile-app/src/components/AppHeader/AppHeader.tsx, apps/mobile-app/app/(app)/_layout.tsx]
+estado: done
+---
+
+## 2026-08-21 — US-010 "Cerrar sesión" (logout manual + inactividad)
+
+**Input**: el usuario (Project Director) pidió pasar Reviewer y Security sobre la implementación de US-010 antes de comitear, si no hay objeciones — mismo criterio que US-009.
+
+**Contexto utilizado**: `.ai/skills/reviewer.md` (checklist: naming, arquitectura respetada, complejidad razonable, SOLID), `docs/user-stories/US-010-cerrar-sesion.md`, adenda ADR-015. Alcance: `inactivity.ts`/`useInactivityLogout.ts` (nuevos), `InactivityWarningModal` (nuevo), `AppHeader.tsx`/`(app)/_layout.tsx` (extendidos).
+
+**Hallazgos**:
+1. **No bloqueante — `useInactivityLogout` sondea cada segundo (`setInterval`) en vez de programar dos `setTimeout` para los dos instantes que realmente importan** (entrada en aviso, expiración): funciona correctamente (verificado con reloj virtual de Playwright) pero hace ~900 comprobaciones ociosas por cada 15 minutos de sesión activa. Coste real despreciable (una resta y dos comparaciones por segundo, sin I/O), pero un diseño con dos timers sería más preciso en intención. Aceptado como está — no se corrige en esta pasada (Reviewer no modifica código).
+2. **Considerado y descartado — llamada a `logout(storage)` duplicada en dos sitios** (`AppHeader.handleLogout` y dentro del intervalo de `useInactivityLogout`): es una sola línea en cada sitio, con motivadores completamente distintos (clic explícito vs. expiración de temporizador) — extraer una función compartida de una línea sería la abstracción prematura que el propio criterio del proyecto pide evitar. No es un hallazgo real.
+3. **Sin hallazgos** en naming (`computeInactivityPhase`/`useInactivityLogout`/`InactivityWarningModal`/`INACTIVITY_TIMEOUT_MS` consistentes con el resto del proyecto), arquitectura (misma separación ya establecida en `useSession.ts`: lógica pura testeada en `inactivity.ts` vs. hook con timers/DOM sin test en `useInactivityLogout.ts`; el hook solo se monta en `(app)/_layout.tsx`, nunca en `(auth)/*`), complejidad (`computeInactivityPhase` es una función de 2 ramas, sin anidamiento) ni SOLID (la detección de inactividad no conoce `AppHeader` ni viceversa — cada uno solo conoce `useSessionStore.logout`).
+
+**Decisión tomada**: ningún hallazgo es bloqueante — pasa a Security para su propia valoración, sin cambios de código en esta pasada.
+
+**Output generado**: esta entrada.
+
+---
+
+---
 task_id: STATUS-028
 date: 2026-08-07
 agentes: [reviewer]

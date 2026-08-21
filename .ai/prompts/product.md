@@ -87,3 +87,25 @@ estado: done
 **Decisión tomada** (confirmada vía AskUserQuestion): no se añade a Como/Quiero/Para ni al Gherkin. Se reescriben las dos líneas correspondientes de "Fuera de alcance" para reflejar que la decisión ya está tomada por el usuario (`.env` por entorno, script de DevOps, cron opcional con intervalo también por `.env`) — pero la formalización (nombres de variables, Caso de Uso) se deja para cuando Architecture Agent lo defina. Mantiene la historia como producto puro sin perder el detalle aportado.
 
 **Output generado**: `docs/user-stories/US-008-subir-material-rag.md` ("Fuera de alcance" actualizado).
+
+---
+
+---
+task_id: STATUS-064
+date: 2026-08-21
+handoff_ref: STATUS-064
+agentes: [product]
+flujo: [director, product]
+artefactos: [docs/user-stories/US-010-cerrar-sesion.md]
+estado: done
+---
+
+## 2026-08-21 — US-010: Cerrar sesión (logout manual + automático por inactividad)
+
+**Input**: el usuario (Project Director) pidió una historia de usuario para poder cerrar sesión, tanto por botón explícito como por inactividad, con redirección a la pantalla de login en ambos casos.
+
+**Contexto utilizado**: `docs/user-stories/US-002-login.md` (contraparte de apertura de sesión, mismo cuidado de nomenclatura "sesión autenticada" vs. otro concepto del dominio), `docs/user-stories/US-006-finalizar-sesion.md` (el otro "cerrar/finalizar" ya existente en el proyecto, que es una `Session` de entrenamiento — no autenticación; riesgo real de confusión de nombres, igual que ya advertía US-002 sobre US-003). Verificado antes de escribir la historia que `useSessionStore.logout(storage)` ya existe en el código (`apps/mobile-app/src/store/useSessionStore.ts`) pero ningún componente lo invoca todavía — no hay botón de logout en la UI actual (`AppHeader.tsx` solo tiene navegación a Inicio/Estadísticas); y que `expireSession()` solo reacciona a un 401 real detectado por el servidor (token inválido), un mecanismo distinto del cierre por inactividad del lado cliente que pide esta historia.
+
+**Decisión tomada** (confirmada vía `AskUserQuestion`): timeout de inactividad fijado en 15 minutos; sí se avisa al usuario antes del cierre automático, con opción de continuar la sesión (no cierre directo sin aviso). Se deja explícitamente fuera de alcance el mecanismo concreto de detección de inactividad/temporizador y si el logout debe además revocar el token en servidor antes de su expiración natural de 7 días (`JwtTokenIssuer`) — ambas son decisiones de Architecture/Security, no de esta historia.
+
+**Output generado**: `docs/user-stories/US-010-cerrar-sesion.md` (nueva). `docs/user-stories/README.md` (fila del índice + nota de trazabilidad US-010 vs. US-006).
