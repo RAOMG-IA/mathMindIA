@@ -8,7 +8,7 @@ task_id: STATUS-064
 date: 2026-08-21
 handoff_ref: STATUS-064
 agentes: [architecture]
-flujo: [director, product, architecture]
+flujo: [director, product, architecture, test, developer, reviewer, security, documentation]
 artefactos: [docs/ADR/ADR-015_mobile_app_screens.md]
 estado: done
 ---

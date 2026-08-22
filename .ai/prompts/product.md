@@ -95,7 +95,7 @@ task_id: STATUS-064
 date: 2026-08-21
 handoff_ref: STATUS-064
 agentes: [product]
-flujo: [director, product]
+flujo: [director, product, architecture, test, developer, reviewer, security, documentation]
 artefactos: [docs/user-stories/US-010-cerrar-sesion.md]
 estado: done
 ---

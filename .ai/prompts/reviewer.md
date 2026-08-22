@@ -7,7 +7,7 @@ Review code quality, architecture compliance, complexity and SOLID principles.
 task_id: STATUS-064
 date: 2026-08-21
 agentes: [reviewer]
-flujo: [product, architecture, test, developer, reviewer, security, documentation]
+flujo: [director, product, architecture, test, developer, reviewer, security, documentation]
 artefactos: [apps/mobile-app/src/store/inactivity.ts, apps/mobile-app/src/store/useInactivityLogout.ts, apps/mobile-app/src/components/InactivityWarningModal, apps/mobile-app/src/components/AppHeader/AppHeader.tsx, apps/mobile-app/app/(app)/_layout.tsx]
 estado: done
 ---

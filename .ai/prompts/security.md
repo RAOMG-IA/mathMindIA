@@ -7,7 +7,7 @@ Review OWASP Top 10 risks, secrets, dependencies and validation.
 task_id: STATUS-064
 date: 2026-08-21
 agentes: [security]
-flujo: [product, architecture, test, developer, reviewer, security, documentation]
+flujo: [director, product, architecture, test, developer, reviewer, security, documentation]
 artefactos: [apps/mobile-app/src/store/useInactivityLogout.ts, apps/mobile-app/src/components/AppHeader/AppHeader.tsx, docs/ADR/ADR-015_mobile_app_screens.md]
 estado: done
 ---

@@ -7,7 +7,7 @@ Create tests before implementation. Produce unit, integration tests, mocks and f
 task_id: STATUS-064
 date: 2026-08-21
 agentes: [test]
-flujo: [product, architecture, test, developer, reviewer, security, documentation]
+flujo: [director, product, architecture, test, developer, reviewer, security, documentation]
 estado: done
 ---
 
