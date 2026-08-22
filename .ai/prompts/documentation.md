@@ -4,6 +4,35 @@ Maintain README, Architecture, ADRs and diagrams.
 ---
 
 ---
+task_id: STATUS-065
+date: 2026-08-22
+agentes: [documentation]
+flujo: [director, documentation]
+artefactos: [README.md]
+estado: done
+---
+
+## 2026-08-22 — Auditoría de README.md contra el checklist de entrega del TFM
+
+**Input**: el usuario (Project Director) pidió comprobar que `README.md` cubre 6 puntos exigidos por la entrega del TFM: (a) descripción general, (b) stack tecnológico, (c) instalación y ejecución, (d) estructura del proyecto, (e) funcionalidades principales, (f) usuario/contraseña de prueba.
+
+**Auditoría (antes de tocar nada)**: `README.md` seguía siendo, en gran parte, el documento de **diseño inicial** del proyecto (hasta decía en "Estado del Proyecto": *"Fase actual: Diseño del sistema"*, escrito antes de que existiera una sola línea de código real). Hallazgos por punto:
+- (a) presente pero sin mencionar el propio sistema multiagente, que es el segundo objeto de estudio real del TFM.
+- (b) presente pero desactualizado: sin Prisma/pgvector/Zod/AWS/EAS; "Modelo Qwen" cuando el cliente es agnóstico de proveedor desde hace semanas; Redis descrito en futuro ("actuará como caché") sin aclarar que sigue sin consumidor de código.
+- (c) **ausente por completo** — cero instrucciones de instalación, variables de entorno o arranque.
+- (d) árbol de estructura sin `.ai/` (la gobernanza del TFM), `deploy/`, `.github/workflows/` ni `docker/`.
+- (e) sin mencionar login/registro/invitado/logout (US-001/002/009/010, todas ya implementadas), estadísticas ni RAG; "Logros y retos futuros" prometía una funcionalidad (`Achievement`) nunca construida.
+- (f) **ausente por completo**.
+
+**Decisión tomada**: reescritura de `README.md` completa. Añadidas dos secciones nuevas ("Instalación y Ejecución", verificada contra `docker-compose.yml`/`.env.example`/scripts reales de cada `package.json`, no inventada; "Usuario y contraseña de prueba") y corregidas (e)/(b)/(d) contra el código real. Para (f): no existe ni se crea un usuario/contraseña fijo publicado — se documenta el botón "Prueba sin registrarte" (US-009, construido explícitamente para este propósito) como vía recomendada, más la alternativa de autorregistro; publicar una credencial fija en el repo habría sido un antipatrón de seguridad sin necesidad real. **Hallazgo colateral corregido**: la cifra "18 ADR en estado Aceptado" (heredada sin verificar de `docs/TFM_PRESENTACION_GOBERNANZA.md`/`TFM_PRESENTACION_CONTENIDO.md`) no cuadra con el recuento real (`ls docs/ADR*`: 14 ficheros, los 14 en estado Aceptado) — corregida a 14 en `README.md`; **no** corregida en los documentos de la presentación (fuera del alcance de esta tarea), señalado al usuario para que decida.
+
+**Output generado**: `README.md` reescrito.
+
+**Adenda (misma fecha)**: el usuario pidió corregir también la presentación. Actualizado el generador (`build.js`, fuera del repo) y regenerado `docs/TFM_Presentacion.pptx` + `docs/TFM_PRESENTACION_CONTENIDO.md`: "18/18 ADR" → "14/14 ADR" (slide 20, Conclusiones). De paso, mismo hallazgo en la cifra vecina de la misma frase: "7/7 User Stories" también estaba desactualizado (US-008/009/010 no existían cuando se escribió) — corregido a "10/10 User Stories" en slides 4 y 20 y en `CONTENIDO.md`, sin que el usuario lo pidiera explícitamente pero por ser el mismo tipo de error en el mismo sitio. Verificado visualmente con PowerPoint vía COM tras regenerar.
+
+---
+
+---
 task_id: STATUS-052
 date: 2026-08-10
 handoff_ref: STATUS-052

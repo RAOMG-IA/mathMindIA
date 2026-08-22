@@ -1,6 +1,6 @@
 # MathMind AI — Contenido detallado de la presentación de TFM
 
-**Documento de apoyo para `docs/TFM_Presentacion.pptx`** (17 diapositivas, defensa corta ≈12-15 min). Incluye 5 capturas de pantalla reales (login, sesión con un ejercicio real generado por IA, home, resumen de sesión y estadísticas), tomadas contra el backend real en local — no mockups.
+**Documento de apoyo para `docs/TFM_Presentacion.pptx`** (20 diapositivas, defensa ≈14-17 min). Incluye 5 capturas de pantalla reales (login, sesión con un ejercicio real generado por IA, home, resumen de sesión y estadísticas), tomadas contra el backend real en local — no mockups.
 Cada apartado `##` se corresponde 1:1 con una diapositiva del `.pptx`. Para cada una: **qué va en la diapositiva** (texto real, tal cual aparece) y **notas del orador** (lo que se dice en voz alta, no escrito en la slide). Fuente de todo el contenido: el propio repositorio (ADRs, `docs/STATUS.md`, `docs/metrics/trazabilidad.md`, `docs/TFM_PRESENTACION_GOBERNANZA.md`, historial de commits) — verificado contra el código real, no solo contra la documentación, el 2026-08-19/20.
 
 ---
@@ -25,7 +25,7 @@ Cada apartado `##` se corresponde 1:1 con una diapositiva del `.pptx`. Para cada
   2. Gobernar **y medir** un desarrollo con agentes de IA especializados por rol
 - "No solo describir la gobernanza — medir su cumplimiento real"
 
-**Notas del orador:** El objeto de estudio no es solo la app. Es demostrar que un desarrollo con agentes de IA puede seguir Clean Architecture, TDD y decisiones arquitectónicas formales (ADRs) de forma verificable — y, más importante, documentar honestamente dónde ese proceso falló y qué mecanismo se introdujo para corregirlo. Esa segunda parte es el aporte académico más defendible, y se detalla en los bloques 12-16.
+**Notas del orador:** El objeto de estudio no es solo la app. Es demostrar que un desarrollo con agentes de IA puede seguir Clean Architecture, TDD y decisiones arquitectónicas formales (ADRs) de forma verificable — y, más importante, documentar honestamente dónde ese proceso falló y qué mecanismo se introdujo para corregirlo. Esa segunda parte es el aporte académico más defendible, y se detalla en los bloques 12-19.
 
 ---
 
@@ -48,7 +48,7 @@ Cada apartado `##` se corresponde 1:1 con una diapositiva del `.pptx`. Para cada
 **En la diapositiva (flujo):**
 Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pista, finalizar) → Resumen → Estadísticas
 
-- 7 User Stories (US-001 a US-007) — **todas implementadas**, MVP funcional completo
+- 10 User Stories (US-001 a US-010) — **todas implementadas**, MVP funcional completo
 - 23 Temas del catálogo matemático (ADR-006), agrupados en 2 niveles: Área → Tema
 
 **Captura real:** pantalla de Sesión en Modo Test, con un ejercicio real generado por IA (`3x - 7 = 2x + 5`, con nota de cálculo mental y las 3 opciones), a la derecha de los bullets.
@@ -76,7 +76,7 @@ Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pis
 - El siguiente ejercicio se elige dentro de una banda alrededor del rating actual (UC-008)
 - Semilla inicial por nivel: Primaria 800 · Secundaria 1200 · Bachillerato 1600 · Ingeniería 2000
 
-**Notas del orador:** `AdaptiveDifficultyEngine` fue el primer componente de dominio construido con TDD real (Red→Green desde el primer commit). Es puro — sin dependencias de framework — y demostrable con 8/8 tests en verde. Aquí también entra el bug real #27 (bloque de errores, slide 16): la semilla inicial ignoraba el nivel académico durante varias iteraciones porque todos los tests usaban Secundaria por defecto, enmascarando el fallo — buen ejemplo de cómo un test "verde" no siempre significa "correcto".
+**Notas del orador:** `AdaptiveDifficultyEngine` fue el primer componente de dominio construido con TDD real (Red→Green desde el primer commit). Es puro — sin dependencias de framework — y demostrable con 8/8 tests en verde. Aquí también entra el bug real #27 (bloque de errores, slide 17): la semilla inicial ignoraba el nivel académico durante varias iteraciones porque todos los tests usaban Secundaria por defecto, enmascarando el fallo — buen ejemplo de cómo un test "verde" no siempre significa "correcto".
 
 ---
 
@@ -124,7 +124,7 @@ Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pis
 - `ExercisePool` **no es una entidad** — es una vista derivada (`ExerciseRepository.findByDifficultyBand`)
 - Invariantes reales aplicadas: p. ej. todo `Answer` de una `Session` respeta el `type` del `Exercise`
 
-**Notas del orador:** ADR-004 formaliza lo que estaba disperso. La decisión de no modelar `ExercisePool` como entidad evita duplicar el mismo dato (`difficulty`) en dos sitios sincronizados — es una vista filtrada, no un estado propio. La invariante de `type` coincidente parece obvia sobre el papel, pero **no se aplicaba en el código real** hasta el incidente #62 (ver slide 16) — un ejemplo directo de la brecha entre "documentado" y "implementado" que también aparece en la parte de gobernanza.
+**Notas del orador:** ADR-004 formaliza lo que estaba disperso. La decisión de no modelar `ExercisePool` como entidad evita duplicar el mismo dato (`difficulty`) en dos sitios sincronizados — es una vista filtrada, no un estado propio. La invariante de `type` coincidente parece obvia sobre el papel, pero **no se aplicaba en el código real** hasta el incidente #62 (ver slide 17) — un ejemplo directo de la brecha entre "documentado" y "implementado" que también aparece en la parte de gobernanza.
 
 ---
 
@@ -148,11 +148,23 @@ Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pis
 - "Ninguna fase puede omitirse" — `.ai/AGENTS.md`
 - Regla de oro: ningún agente toca código sin consultar antes ADRs/ARCHITECTURE.md/README.md
 
-**Notas del orador:** Aquí empieza el segundo objeto de estudio del TFM. 8 agentes operativos con responsabilidades y restricciones explícitas — p. ej. Test **no puede** implementar código productivo, Developer **no puede** crear código sin tests previos. El QA Agent se eliminó deliberadamente (ADR-002): sus funciones se repartieron entre Product/Test/Reviewer/Security para no duplicar responsabilidades de calidad ya cubiertas. Esta diapositiva es la promesa de diseño — las siguientes 3 muestran qué pasó cuando se contrastó contra la realidad.
+**Notas del orador:** Aquí empieza el segundo objeto de estudio del TFM. 8 agentes operativos con responsabilidades y restricciones explícitas — p. ej. Test **no puede** implementar código productivo, Developer **no puede** crear código sin tests previos. El QA Agent se eliminó deliberadamente (ADR-002): sus funciones se repartieron entre Product/Test/Reviewer/Security para no duplicar responsabilidades de calidad ya cubiertas. Esta diapositiva es la promesa de diseño — las siguientes muestran qué pasó cuando se contrastó contra la realidad.
 
 ---
 
-## Slide 13 — El incidente que cambió el proceso
+## Slide 13 — Reglas transversales del sistema
+
+**En la diapositiva:**
+- **Jerarquía Documental** — ante conflicto, manda siempre en este orden: `ADR > ARCHITECTURE.md > README.md > Skills > Prompt recibido`
+- **Regla de Oro** — ningún agente toca código sin consultar antes esos documentos
+- **TDD Enforcement Rule** — `User Story → Diseño → Tests → Implementación → Refactorización`
+- **Reglas de Reutilización** — prohibido duplicar entidades, DTOs o utilidades entre `packages/shared-*`
+
+**Notas del orador:** Antes de ver qué falló, quiero dejar claro qué reglas aplican a todos los agentes por igual, sin excepción de rol. La más importante para mí es la primera: si hay conflicto entre lo que dice un ADR y lo que pide un prompt puntual, gana el ADR, siempre. Suena obvio, pero es justo la regla que evita que un agente "convenza" al sistema de saltarse una decisión ya tomada. La TDD Enforcement Rule tampoco es un checklist de calidad — forma parte de la arquitectura del sistema, no del proceso: no hay implementación sin test antes. Y la regla de reutilización se verifica con un `grep` antes de crear nada nuevo, no de memoria.
+
+---
+
+## Slide 14 — El incidente que cambió el proceso
 
 **En la diapositiva:**
 > "Verificado en la práctica que la jerarquía de decisión y el flujo obligatorio no se estaban siguiendo: ninguna tarea pasó realmente por Director/Orchestrator/Knowledge Manager, y Reviewer/Security se saltaron en la implementación de autenticación real."
@@ -165,7 +177,7 @@ Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pis
 
 ---
 
-## Slide 14 — De la prosa al dato medible
+## Slide 15 — De la prosa al dato medible
 
 **En la diapositiva:**
 - ADR-003 (origen): registro en prosa libre por agente — "la disciplina de registro es manual, no forzada por tooling"
@@ -177,7 +189,7 @@ Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pis
 
 ---
 
-## Slide 15 — Resultados medidos (KPIs reales)
+## Slide 16 — Resultados medidos (KPIs reales)
 
 **En la diapositiva (tabla):**
 
@@ -191,11 +203,11 @@ Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pis
 
 *`docs/metrics/trazabilidad.md`, generado 2026-08-11 sobre 86 entradas / 49 tareas*
 
-**Notas del orador:** Esta es la slide central de la defensa. Incluso **después** de introducir el Contrato de Handoff, el flujo obligatorio de 7 fases no se cumplió completo en ninguna tarea real del proyecto. Reviewer sigue siendo el eslabón más débil. La lectura honesta, y la que hay que defender: esto no es un fracaso del sistema — es la prueba de que medir en vez de solo describir permite saber esto con certeza, en vez de descubrirlo por accidente (como pasó con el incidente de la slide 13).
+**Notas del orador:** Esta es la slide central de la defensa. Incluso **después** de introducir el Contrato de Handoff, el flujo obligatorio de 7 fases no se cumplió completo en ninguna tarea real del proyecto. Reviewer sigue siendo el eslabón más débil. La lectura honesta, y la que hay que defender: esto no es un fracaso del sistema — es la prueba de que medir en vez de solo describir permite saber esto con certeza, en vez de descubrirlo por accidente (como pasó con el incidente de la slide 14).
 
 ---
 
-## Slide 16 — Errores reales (selección)
+## Slide 17 — Errores reales (selección)
 
 **En la diapositiva (4 casos):**
 1. **IDOR en mensajes de error** — 3 rutas protegidas distinguían "sesión inexistente" de "sesión de otro usuario" → mensaje genérico + 403 (`errorMapping.ts`)
@@ -207,10 +219,36 @@ Registro / Login → Home (elegir Tema + Nivel) → Sesión (resolver, pedir pis
 
 ---
 
-## Slide 17 — Conclusiones
+## Slide 18 — Buenas prácticas aplicadas
 
 **En la diapositiva:**
-- Producto: **MVP funcional completo** — 7/7 User Stories, 18/18 ADR en estado Aceptado
+- **ADRs vivos, no estáticos** — se enmiendan con adendas fechadas, nunca se reescriben
+- **TDD real, no nominal** — ciclo Red→Green desde el primer componente de dominio
+- **Validación de contratos de IA en el borde**, no confianza ciega en la salida del LLM (Zod)
+- **Reevaluación tecnológica documentada**, no silenciosa — Chroma→pgvector, 5 ADR de seguridad→1
+- **Deuda técnica aceptada de forma explícita**, nunca oculta tras un mock que no demuestra nada real
+
+**Notas del orador:** No todo en este proyecto fue corregir errores, y quiero dedicar una diapositiva a lo que funcionó bien desde el principio. Para mí la más importante es la primera: los ADR nunca se reescriben, se enmiendan con fecha, así que el razonamiento original queda como evidencia aunque nos equivocáramos después. Destaco también la validación de Zod en el borde de los contratos de IA — no confiamos en que el LLM responda exactamente lo que le pedimos, lo comprobamos antes de usarlo, y eso evitó el incidente real que acabamos de ver. Y cuando una decisión previa dejó de tener sentido, como Chroma o el paquete de 5 ADR de seguridad, se cambió y se documentó por qué — nunca en silencio.
+
+---
+
+## Slide 19 — Patrones de aprendizaje transversales
+
+**En la diapositiva:**
+- El propio sistema falló en seguir su flujo de gobernanza — **y lo hizo dos veces, no una**
+- Los huecos de diseño se revelan al construir el siguiente consumidor real, no al diseñar
+- Confiar en la salida de un LLM sin validar en el borde produce fallos reproducibles y costosos
+- Diagnóstico por capas antes de corregir código — verificar con herramientas externas primero
+- "Cambio de proceso, no de intención"
+
+**Notas del orador:** Si me preguntáis cuál es la lección que me llevo de todo el proyecto, es esta diapositiva. El hueco de Reviewer y Security no se cerró la primera vez — volvió a aparecer más adelante, ya en `mobile-app`. Y ahí entendí que la solución no podía ser "tener más cuidado la próxima vez", tenía que ser un cambio de proceso que hiciera imposible saltárselo en silencio — el contrato de handoff que ya hemos visto. El resto de patrones son más técnicos, pero todos comparten la misma idea de fondo: el problema no se ve hasta que algo real lo atraviesa, ni en el diseño ni en la revisión.
+
+---
+
+## Slide 20 — Conclusiones
+
+**En la diapositiva:**
+- Producto: **MVP funcional completo** — 10/10 User Stories, 14/14 ADR en estado Aceptado
 - Un sistema multiagente gobernado por reglas explícitas **no garantiza por sí solo** su cumplimiento
 - La gobernanza solo es verificable cuando pasa de estar **descrita** a estar **instrumentada**
 - Trabajo futuro: cobertura real de tests (no solo declarada), cerrar la brecha de Reviewer, HTTPS en producción, build nativo (EAS) integrado en CI/CD
